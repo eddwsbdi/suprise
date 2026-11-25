@@ -1,0 +1,3679 @@
+<!DOCTYPE html>
+<html lang="en" style="--bg-aura: rgba(48, 14, 52, 0.50); --accent-primary: #ff5ebc; --accent-soft: #ffc4eb; --accent-glow: rgba(255, 94, 188, 0.54);"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://*.fbcdn.net https://*.fbsbx.com https://static.whatsapp.net data: blob:;"><script>
+  (function() {
+    function createStorage() {
+      var values = Object.create(null);
+      var storage = {
+        getItem: function(key) {
+          key = String(key);
+          return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : null;
+        },
+        setItem: function(key, value) {
+          values[String(key)] = String(value);
+        },
+        removeItem: function(key) {
+          delete values[String(key)];
+        },
+        clear: function() {
+          values = Object.create(null);
+        },
+        key: function(index) {
+          index = Number(index);
+          if (!Number.isFinite(index)) index = 0;
+          index = Math.trunc(index);
+          var keys = Object.keys(values);
+          return index >= 0 && index < keys.length ? keys[index] : null;
+        }
+      };
+      Object.keys(storage).forEach(function(name) {
+        Object.defineProperty(storage, name, {
+          value: storage[name],
+          configurable: true,
+          enumerable: false,
+          writable: true
+        });
+      });
+      Object.defineProperty(storage, 'length', {
+        get: function() {
+          return Object.keys(values).length;
+        },
+        configurable: true
+      });
+      return new Proxy(storage, {
+        get: function(target, property, receiver) {
+          if (Reflect.has(target, property)) {
+            return Reflect.get(target, property, receiver);
+          }
+          if (typeof property === 'string' && Object.prototype.hasOwnProperty.call(values, property)) {
+            return values[property];
+          }
+        },
+        set: function(target, property, value, receiver) {
+          if (property === 'length') return true;
+          if (typeof property === 'string' && !Reflect.has(target, property)) {
+            values[property] = String(value);
+            return true;
+          }
+          return Reflect.set(target, property, value, receiver);
+        },
+        deleteProperty: function(target, property) {
+          if (typeof property === 'string' && Object.prototype.hasOwnProperty.call(values, property)) {
+            delete values[property];
+          }
+          return true;
+        },
+        has: function(target, property) {
+          return Reflect.has(target, property) ||
+            (typeof property === 'string' && Object.prototype.hasOwnProperty.call(values, property));
+        },
+        ownKeys: function(target) {
+          return Reflect.ownKeys(target).concat(
+            Object.keys(values).filter(function(key) { return !Reflect.has(target, key); })
+          );
+        },
+        getOwnPropertyDescriptor: function(target, property) {
+          var descriptor = Reflect.getOwnPropertyDescriptor(target, property);
+          if (descriptor) return descriptor;
+          if (typeof property === 'string' && Object.prototype.hasOwnProperty.call(values, property)) {
+            return {
+              value: values[property],
+              configurable: true,
+              enumerable: true,
+              writable: true
+            };
+          }
+        }
+      });
+    }
+
+    function installStorageIfNeeded(name) {
+      try {
+        var existingStorage = window[name];
+        if (existingStorage && typeof existingStorage.getItem === 'function') {
+          var probeKey = '__wa_storage_probe__' + Math.random();
+          existingStorage.setItem(probeKey, probeKey);
+          var probeValue = existingStorage.getItem(probeKey);
+          existingStorage.removeItem(probeKey);
+          if (probeValue === probeKey) return;
+        }
+      } catch (ignored) {}
+
+      var storage = createStorage();
+      try {
+        Object.defineProperty(window, name, {
+          value: storage,
+          configurable: true,
+          enumerable: true,
+          writable: true
+        });
+      } catch (ignored) {
+        try {
+          window[name] = storage;
+        } catch (alsoIgnored) {
+          if (window.console && typeof window.console.error === 'function') {
+            window.console.error('Unable to install ephemeral ' + name);
+          }
+        }
+      }
+    }
+
+    installStorageIfNeeded('localStorage');
+    installStorageIfNeeded('sessionStorage');
+  })();
+</script><style>
+  :where(:root) {
+    --hatch-widget-bg: transparent;
+    --hatch-widget-surface: #FFFFFF;
+    --hatch-widget-radius: 16px;
+    --hatch-widget-surface-muted: #F7F5F3;
+    --hatch-widget-text: #0A1014;
+    --hatch-widget-muted: #5B6368;
+    --hatch-widget-border: rgba(17, 27, 33, 0.1);
+    --hatch-widget-accent: #1DAA61;
+    --hatch-widget-on-accent: #FFFFFF;
+    --hatch-widget-focus: rgba(29, 170, 97, 0.35);
+    --hatch-widget-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+</style><script>(function () {
+  var state = {};
+  var initialized = false;
+  function plain(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) { return {}; }
+    try {
+      var copy = JSON.parse(JSON.stringify(value));
+      return copy && typeof copy === "object" && !Array.isArray(copy) ? copy : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  // A page that defines its own `window.hatchWidget` replaces this one; it then hears nothing from it.
+  function emit() {
+    if (window.hatchWidget !== api) { return; }
+    try {
+      window.dispatchEvent(new CustomEvent("hatch-widget-state", { detail: { state: plain(state) } }));
+    } catch (e) {}
+  }
+  function write(next) {
+    state = plain(next);
+    initialized = true;
+    emit();
+  }
+  var api = {
+    getState: function (defaults) {
+      if (!initialized && arguments.length > 0 && defaults && typeof defaults === "object" && !Array.isArray(defaults)) {
+        write(defaults);
+      }
+      return plain(state);
+    },
+    setState: function (next) { write(next); },
+    sendMessage: function () {}
+  };
+  window.hatchWidget = api;
+  window.hatchAgent = { sendHiddenMessage: function () {} };
+  document.addEventListener("DOMContentLoaded", emit);
+})();</script><script data-bard-client-injected="true">(function(firebaseConfig, initialAuthToken, appId) {
+  window.__firebase_config = firebaseConfig;
+  window.__initial_auth_token = initialAuthToken;
+  window.__app_id = appId;
+})("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjExNjRiNzdiNDMzZDdhMDAyMWI4NjE4YjhjYTU3ZTMyZGI5MWUxMTMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6Ly9pZGVudGl0eXRvb2xraXQuZ29vZ2xlYXBpcy5jb20vZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIwNDA3ODE0MTM3MDEwNjM5Mzk5OSIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJjX2IyYTA1MzIwZjQ0ZGE3ZTlfYXNjaWlfbG92ZV9wcm9wb3NhbC5odG1sLTcwMSJ9LCJleHAiOjE3OTUyODI3ODcsImlhdCI6MTc5NTI3OTE4NywiYWxnIjoiUlMyNTYifQ.Ym2sGb30qni6BbhIBNYZjitEEkwcptKZfcTSNyZOJXpbpROjC4gT6edg0ZDo4NiddG1tcNZY37ni7249BuC3YyuHgisfW-0nZmtbgHHchGUVahPItqxpJ2jf1fUyiUGI-xG1Es1kqL1UJNF3zB0sC24mvha8XCYASWaXeZMPk_JkXmhCInogsRZ3lIDhp06j2zOORH0OhPMoWw05drGxPtVZrio6R54BBOBkXEsjSQ0M6in2R4pqkl8BJzJX6sTGanxuKsAxhiB7xoURjAYk11hjHhEMsRVUtYyZsc3Z1eJOoUw9YVpMWgftUXyeRvPf44wPBRovReEiopaMwefzUA","c_b2a05320f44da7e9_ascii_love_proposal.html-701")</script><script data-bard-client-injected="true">
+  document.addEventListener('input', (event) => {
+    if (event.target && (event.target.isContentEditable || event.target.hasAttribute('contenteditable'))) {
+      const clonedDoc = document.cloneNode(true);
+      const injectedScripts = clonedDoc.querySelectorAll('[data-bard-client-injected="true"]');
+      injectedScripts.forEach(el => el.remove());
+      window.parent.postMessage({
+        type: 'inlineEdit',
+        html: '<!DOCTYPE html>\n' + clonedDoc.documentElement.outerHTML
+      }, '*');
+    }
+  });
+</script><script data-bard-client-injected="true">(function(){'use strict';window.addEventListener("message",a=>{a.data&&a.data.type==="SUPPLEMENTAL_DATA_UPDATE"&&window.dispatchEvent(new CustomEvent("supplementaldataupdate",{detail:a.data.data}))});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const SCROLL_KEYS = new Set([
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    ' ', 'Spacebar', 'PageUp', 'PageDown', 'Home', 'End',
+  ]);
+  const HORIZONTAL_KEYS = new Set(['ArrowLeft', 'ArrowRight']);
+
+  function isTextEntryTarget(target) {
+    if (!target) return false;
+    const tagName = target.tagName;
+    return tagName === 'INPUT' || tagName === 'TEXTAREA' ||
+      tagName === 'SELECT' || target.isContentEditable === true;
+  }
+
+  // An element absorbs the key only if it both overflows on the axis being
+  // scrolled and is configured to scroll on that axis. The cheap dimension
+  // test runs first because getComputedStyle forces a style recalc, and this
+  // runs on every keypress. Each axis is read from its own longhand: the
+  // 'overflow' shorthand serializes as two values when the axes differ, which
+  // is the common 'overflow-x: hidden; overflow-y: auto' pane.
+  function canScroll(node, horizontal) {
+    const overflows = horizontal ? node.scrollWidth > node.clientWidth
+      : node.scrollHeight > node.clientHeight;
+    if (!overflows) return false;
+    const style = window.getComputedStyle(node);
+    const overflow = horizontal ? style.overflowX : style.overflowY;
+    return overflow === 'auto' || overflow === 'scroll';
+  }
+
+  // Walks up from the event target so nested scrollers keep their behavior.
+  // <body> is included because pages that pin the root height make it the
+  // scroll container.
+  function hasScrollableAncestor(target, horizontal) {
+    let node = target;
+    while (node && node !== document.documentElement) {
+      if (canScroll(node, horizontal)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function rootCanScroll(horizontal) {
+    const scroller = document.scrollingElement || document.documentElement;
+    if (!scroller) return false;
+    // Tolerate a pixel of rounding so subpixel layouts do not look scrollable.
+    return horizontal ? scroller.scrollWidth > window.innerWidth + 1
+      : scroller.scrollHeight > window.innerHeight + 1;
+  }
+
+  window.addEventListener('keydown', function(event) {
+    if (!SCROLL_KEYS.has(event.key)) return;
+    if (event.defaultPrevented) return;
+    // Alt and Meta turn arrows into browser history navigation, and Ctrl is
+    // reserved for shortcuts, so none of them are scroll intent.
+    if (event.altKey || event.metaKey || event.ctrlKey) return;
+
+    const target = event.target;
+    if (isTextEntryTarget(target)) return;
+
+    // Anything that can still absorb the scroll gets to keep it.
+    const horizontal = HORIZONTAL_KEYS.has(event.key);
+    if (rootCanScroll(horizontal)) return;
+    if (hasScrollableAncestor(target, horizontal)) return;
+
+    event.preventDefault();
+  }, {capture: true, passive: false});
+})();</script><script data-bard-client-injected="true">(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+    if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script data-bard-client-injected="true">
+  let realOriginalGetUserMedia = null;
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  }
+
+  (function() {
+    if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+      try {
+        Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+          get: function() {
+            return undefined; // Or throw an error
+          },
+          configurable: false
+        });
+      } catch (error) {
+        console.error("Error defining prototype getter:", error);
+      }
+    }
+  })();
+
+  (function() {
+    const pendingMediaResolvers = {};
+    let nextMediaPromiseId = 0;
+
+    function requestMediaPermissions(constraints) {
+      const mediaPromiseId = nextMediaPromiseId++;
+      const promise = new Promise((resolve, reject) => {
+        pendingMediaResolvers[mediaPromiseId] = (granted) => {
+          delete pendingMediaResolvers[mediaPromiseId];
+          resolve(granted);
+        };
+      });
+
+      window.parent.postMessage({
+        type: 'requestMediaPermission',
+        constraints: constraints,
+        promiseId: mediaPromiseId,
+      }, '*');
+
+      return promise;
+    }
+
+    let originalGetUserMedia = realOriginalGetUserMedia;
+
+    function interceptGetUserMedia() {
+      if (navigator.mediaDevices) {
+        Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+          value: function(constraints) {
+            return requestMediaPermissions(constraints).then((granted) => {
+              if (granted) {
+                if (originalGetUserMedia) {
+                  return originalGetUserMedia(constraints);
+                } else {
+                  throw new Error("Original getUserMedia not available.");
+                }
+              } else {
+                throw new DOMException('Permission denied', 'NotAllowedError');
+              }
+            });
+          },
+          writable: false,
+          configurable: false
+        });
+      }
+    }
+
+    interceptGetUserMedia();
+
+    const observer = new MutationObserver(function(mutationsList, observer) {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+          interceptGetUserMedia();
+        } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+          interceptGetUserMedia();
+        } else if (mutation.type === 'childList' && mutation.addedNodes) {
+          mutation.addedNodes.forEach(node => {
+            if (node === navigator.mediaDevices) {
+              interceptGetUserMedia();
+            }
+          });
+        }
+      }
+    });
+
+    function interceptSpeechRecognition() {
+      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        return;
+      }
+
+      const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      const SpeechRecognitionWrapper = function(...args) {
+        const recognizer = new OriginalSpeechRecognition(...args);
+        const originalStart = recognizer.start.bind(recognizer);
+
+        recognizer.start = function() {
+          requestMediaPermissions({ audio: true }).then(granted => {
+            if (granted) {
+              originalStart();
+            } else {
+              const errorEvent = new SpeechRecognitionErrorEvent('error');
+              errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
+              recognizer.dispatchEvent(errorEvent);
+            }
+          });
+        };
+
+        return recognizer;
+      };
+
+      SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
+      SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
+
+      if (window.SpeechRecognition) {
+        window.SpeechRecognition = SpeechRecognitionWrapper;
+      }
+      if (window.webkitSpeechRecognition) {
+        window.webkitSpeechRecognition = SpeechRecognitionWrapper;
+      }
+    }
+
+    interceptSpeechRecognition();
+
+    window.addEventListener('message', function(event) {
+      if (event.data) {
+        if (event.data.type === 'resolveMediaPermission') {
+          const { promiseId, granted } = event.data;
+          if (pendingMediaResolvers[promiseId]) {
+            pendingMediaResolvers[promiseId](granted);
+          }
+        }
+      }
+    });
+
+  })();</script><script ws-interception-config="{&quot;parentOrigin&quot;:&quot;https://gemini.google.com&quot;,&quot;proxiedDomains&quot;:[]}" data-bard-client-injected="true">(function(){'use strict';var u=typeof Object.defineProperties=="function"?Object.defineProperty:function(b,d,e){if(b==Array.prototype||b==Object.prototype)return b;b[d]=e.value;return b};function v(b){b=["object"==typeof globalThis&&globalThis,b,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var d=0;d<b.length;++d){var e=b[d];if(e&&e.Math==Math)return e}throw Error("Cannot find global object");}var w=v(this);
+  function y(b,d){if(d)a:{var e=w;b=b.split(".");for(var h=0;h<b.length-1;h++){var k=b[h];if(!(k in e))break a;e=e[k]}b=b[b.length-1];h=e[b];d=d(h);d!=h&&d!=null&&u(e,b,{configurable:!0,writable:!0,value:d})}}function z(b){function d(h){return b.next(h)}function e(h){return b.throw(h)}return new Promise(function(h,k){function m(n){n.done?h(n.value):Promise.resolve(n.value).then(d,e).then(m,k)}m(b.next())})}y("globalThis",function(b){return b||w});/*
+
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+  function A(b,d){function e(){}e.prototype=d.prototype;b.i=d.prototype;b.prototype=new e;b.prototype.constructor=b;b.h=function(h,k,m){for(var n=Array(arguments.length-2),p=2;p<arguments.length;p++)n[p-2]=arguments[p];return d.prototype[k].apply(h,n)}};function B(b,d,e="*"){function h(a){if(typeof a==="string")return F.encode(a).buffer;if(a instanceof ArrayBuffer)return a.slice(0);if(ArrayBuffer.isView(a))return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);throw Error("Invalid data type");}function k(a){a=h(a);var f={type:"send",data:new Uint8Array(a)},g;(g=r)==null||g.postMessage(f,[a])}function m(){if(!r)throw Error("Data port not captured yet.");r.onmessage=a=>{if(a.data.type==="message"){a=new MessageEvent("message",{data:G.decode(a.data.data)});
+    let f;(f=c.onmessage)==null||f.call(c,a);c.dispatchEvent(a)}}}function n(){if(!t)throw Error("Control port not captured yet.");t.onmessage=a=>{switch(a.data.type){case "open":l=1;var f=new Event("open"),g;(g=c.onopen)==null||g.call(c,f);c.dispatchEvent(f);q.forEach(H=>{k(H)});q=[];break;case "close":g=a.data;l=3;g=new CloseEvent("close",{code:g.code,reason:g.reason,wasClean:g.wasClean});(f=c.onclose)==null||f.call(c,g);c.dispatchEvent(g);break;case "error":l=3;f=new Event("error");let x;(x=c.onerror)==
+  null||x.call(c,f);c.dispatchEvent(f)}}}function p(a){return z(function*(){var f=new MessageChannel;t=f.port1;var g=new MessageChannel;r=g.port1;n();m();window.parent.postMessage({type:"websocket_open",portOrdering:["control","data"],url:b,protocols:a||[],connectionId:I},e,[f.port2,g.port2])}())}var c=Reflect.construct(EventTarget,[],new.target);c.CONNECTING=0;c.OPEN=1;c.CLOSING=2;c.CLOSED=3;c.url=b;c.binaryType="arraybuffer";c.protocol="";c.extensions="";var l=0,t=null,r=null,q=[],F=new TextEncoder,
+    G=new TextDecoder;c.onopen=null;c.onmessage=null;c.onclose=null;c.onerror=null;Object.defineProperty(c,"readyState",{get:()=>l,enumerable:!0,configurable:!0});Object.defineProperty(c,"bufferedAmount",{get:()=>{var a=0;q.forEach(f=>{a+=typeof f==="string"?f.length:f.byteLength});return a},enumerable:!0,configurable:!0});var I=function(){var a;return((a=globalThis.crypto)==null?0:a.randomUUID)?globalThis.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,f=>{var g=Math.random()*
+    16|0;return(f==="x"?g:g&3|8).toString(16)})}();c.send=a=>{if(l===1)a instanceof Blob?a.arrayBuffer().then(f=>{k(f)}):k(a);else if(l===0)if(typeof a==="string")q.push(a);else if(a instanceof ArrayBuffer||ArrayBuffer.isView(a))q.push(h(a));else throw Error("Sending Blob is not supported before the connection is open.");else console.debug("WebSocket send called in CLOSING or CLOSED state; ignored.")};c.close=(a=1E3,f="")=>{if(l!==2&&l!==3){l=2;a={type:"close",code:a,reason:f,wasClean:a===1E3};var g;
+    (g=t)==null||g.postMessage(a)}};Promise.resolve().then(()=>p(d));return c}A(B,EventTarget);var C=document.currentScript,D=C==null?void 0:C.getAttribute("ws-interception-config");if(!D)throw Error("WebSocket Interceptor: Missing ws-interception-config attribute in the script tag.");var E=JSON.parse(D);if(!E.parentOrigin||typeof E.parentOrigin!=="string")throw Error("WebSocket Interceptor: Invalid parentOrigin in ws-interception-config");
+  (function(b){var d=Object.getOwnPropertyDescriptor(window,"WebSocket");if(!d||d.writable||d.configurable)d=Object.assign(function(e,h){try{let k=(new URL(e)).hostname;if(b.proxiedDomains.some(m=>k===m||k.endsWith(`.${m}`)))return new B(e,h,b.parentOrigin)}catch(k){throw window.parent.postMessage({type:"websocket_blocked",url:e,reason:"blocked_invalid_url"},b.parentOrigin),new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");}window.parent.postMessage({type:"websocket_blocked",
+    url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");},{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3}),Object.defineProperty(window,"WebSocket",{value:d,writable:!1,configurable:!1})})({proxiedDomains:E.proxiedDomains||[],parentOrigin:E.parentOrigin});}).call(this);
+</script><script data-bard-client-injected="true">((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageTransformModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+  modelInformation.deprecatedImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predict',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predictLongRunning',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedGenerateImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedImageTransformModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+          serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+          serializedBodyForPostMessage = null;
+        } else {
+          try {
+            serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+          } catch (e) {
+            serializedBodyForPostMessage = null;
+          }
+        }
+
+        const messageOptions = {
+          method: effectiveOptions.method,
+          headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+          body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-3-flash-preview","imageModelName":"imagen-4.0-generate-001","imageEditModelName":"gemini-3.1-flash-image","imageTransformModelName":"gemini-3-pro-image","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-preview-04-17","gemini-2.5-flash-preview-05-20","gemini-2.5-flash-preview-09-2025"],"deprecatedImageModelNames":["imagen-3.0-generate-001","imagen-3.0-generate-002"],"deprecatedGenerateImageModelNames":["gemini-2.5-flash-image-preview","gemini-2.5-flash-image","gemini-3.1-flash-image-preview"],"deprecatedImageTransformModelNames":["gemini-3-pro-image-preview-11-2025"]})</script><script data-bard-client-injected="true">(function() {
+  const OVERLAY_SELECTOR =
+    'dialog[open], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [role="combobox"]';
+
+  function isVisibleOverlay(element) {
+    if (element.closest('[hidden], [aria-hidden="true"], [inert]')) {
+      return false;
+    }
+    if (window.getComputedStyle(element).visibility === 'hidden') {
+      return false;
+    }
+    for (let cur = element; cur; cur = cur.parentElement) {
+      if (window.getComputedStyle(cur).display === 'none') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function hasOpenOverlay() {
+    const candidates = document.querySelectorAll(OVERLAY_SELECTOR);
+    for (let i = 0; i < candidates.length; i++) {
+      if (isVisibleOverlay(candidates[i])) {
+        return true;
+      }
+    }
+    try {
+      if (document.querySelector('[popover]:popover-open')) {
+        return true;
+      }
+    } catch (e) {
+      // Ignore engines that do not support :popover-open.
+    }
+    return false;
+  }
+
+  function isNonEmptySearchInput(target) {
+    return (
+      Boolean(target) &&
+      target.tagName === 'INPUT' &&
+      typeof target.type === 'string' &&
+      target.type.toLowerCase() === 'search' &&
+      typeof target.value === 'string' &&
+      target.value.length > 0
+    );
+  }
+
+  function shouldIgnoreEscape(event) {
+    return (
+      event.key !== 'Escape' ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.isComposing ||
+      event.repeat ||
+      event.keyCode === 229 ||
+      isNonEmptySearchInput(event.target)
+    );
+  }
+
+  let shouldIgnoreCaptureState = false;
+
+  window.addEventListener(
+    'keydown',
+    function(event) {
+      if (event.key === 'Escape') {
+        shouldIgnoreCaptureState =
+          hasOpenOverlay() || isNonEmptySearchInput(event.target);
+      }
+    },
+    {capture: true},
+  );
+
+  window.addEventListener('keydown', function(event) {
+    if (
+      shouldIgnoreEscape(event) ||
+      event.defaultPrevented ||
+      shouldIgnoreCaptureState
+    ) {
+      return;
+    }
+    const wasBlockedOnCapture = shouldIgnoreCaptureState;
+    queueMicrotask(function() {
+      if (event.defaultPrevented || wasBlockedOnCapture) {
+        return;
+      }
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({'type': 'escapeKey'}, '*');
+      }
+    });
+  });
+})();</script><script data-bard-client-injected="true">(function() {
+  function normalizeSlug(str) {
+    try {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^p{L}p{N}s_-]/gu, '')
+        .replace(/s+/g, '-');
+    } catch (e) {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9s_-]/g, '')
+        .replace(/s+/g, '-');
+    }
+  }
+
+  function findTargetElement(hash) {
+    if (!hash || hash === '#') {
+      return null;
+    }
+    const rawId = hash.startsWith('#') ? hash.slice(1) : hash;
+    let decodedId = rawId;
+    try {
+      decodedId = decodeURIComponent(rawId);
+    } catch (e) {
+      // Ignore URI malformed errors.
+    }
+
+    // 1. Direct ID match (raw and decoded).
+    let target = document.getElementById(rawId) || document.getElementById(decodedId);
+    if (target) {
+      return target;
+    }
+
+    // 2. Name attribute match (<a name="...">).
+    try {
+      if (typeof CSS !== 'undefined' && CSS.escape) {
+        target =
+          document.querySelector('[name="' + CSS.escape(rawId) + '"]') ||
+          document.querySelector('[name="' + CSS.escape(decodedId) + '"]');
+      } else {
+        const namedElements = document.getElementsByName(rawId);
+        if (namedElements && namedElements.length > 0) {
+          return namedElements[0];
+        }
+      }
+    } catch (e) {
+      // Ignore querySelector syntax errors.
+    }
+    if (target) {
+      return target;
+    }
+
+    // 3. Match heading text by slug (for Markdown TOCs where headings lack explicit IDs).
+    const targetSlug = normalizeSlug(decodedId);
+    if (targetSlug) {
+      for (const heading of document.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+        if (normalizeSlug(heading.textContent || '') === targetSlug) {
+          return heading;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  document.addEventListener('click', function(event) {
+    const target = event.target;
+    const anchor = target && typeof target.closest === 'function' ? target.closest('a') : null;
+    if (!anchor) {
+      return;
+    }
+
+    const href = anchor.getAttribute('href');
+    if (
+      !href ||
+      href.trim().toLowerCase().startsWith('javascript:') ||
+      anchor.hasAttribute('download')
+    ) {
+      return;
+    }
+
+    // Check if the link is an in-page hash / anchor link.
+    if (href.startsWith('#')) {
+      event.preventDefault();
+      const targetElement = findTargetElement(href);
+      if (targetElement) {
+        targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+      return;
+    }
+
+    // Check if the URL has the same origin/pathname but with a hash.
+    try {
+      const url = new URL(anchor.href, window.location.href);
+      if (
+        url.hash &&
+        url.origin === window.location.origin &&
+        url.pathname === window.location.pathname
+      ) {
+        event.preventDefault();
+        const targetElement = findTargetElement(url.hash);
+        if (targetElement) {
+          targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+        return;
+      }
+    } catch (e) {
+      // Fall through if URL parsing fails.
+    }
+
+    // For all external or full navigation links, prevent iframe-level navigation
+    // (which breaks in AGSA WebView or sandboxed iframes) and ensure they open
+    // safely in a new tab/window.
+    if (anchor.target !== '_blank') {
+      event.preventDefault();
+      window.open(anchor.href, '_blank', 'noopener,noreferrer');
+    }
+  }, {capture: true});
+})();</script><script data-bard-client-injected="true">(function(){'use strict';function a(){window.parent.postMessage({type:"interaction"},"*")}window.addEventListener("click",a,{capture:!0,passive:!0});window.addEventListener("touchstart",a,{capture:!0,passive:!0});window.addEventListener("keydown",a,{capture:!0,passive:!0});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+  /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"><title>DO YOU LOVE ME? — Interactive 3D ASCII Proposal</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js" defer="" crossorigin="anonymous"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"><style>
+  /* =========================================================================
+   * TRUE EDGE-TO-EDGE FULLSCREEN LOCK (100vw x 100dvh, zero scrollbars)
+   * ========================================================================= */
+  :root {
+    --bg-void: #06030a;
+    --bg-aura: rgba(54, 12, 36, 0.48);
+    --accent-primary: #ff2a6d;
+    --accent-soft: #ff8fb3;
+    --accent-glow: rgba(255, 42, 109, 0.58);
+    --glass-bg: rgba(12, 6, 18, 0.66);
+    --glass-border: rgba(255, 255, 255, 0.13);
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--bg-void);
+    background-image: radial-gradient(circle at 50% 46%, var(--bg-aura) 0%, rgba(11, 5, 20, 0.88) 54%, #050209 100%);
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+    color: #fff5f8;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background-color 0.6s ease;
+  }
+
+  /* Full-bleed DPR-scaled HTML5 Canvas covering every pixel edge-to-edge */
+  #sceneCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+    z-index: 1;
+  }
+
+  #sceneCanvas.is-dragging {
+    cursor: grabbing;
+  }
+
+  /* Subtle romantic CRT scanline sheen */
+  .velvet-scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0) 3px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+  }
+
+  /* Glassmorphic floating surfaces */
+  .glass-surface {
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      0 14px 44px rgba(0, 0, 0, 0.62),
+      inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
+
+  /* Glowing romantic ASCII typography */
+  .glow-headline {
+    text-shadow:
+      0 0 14px var(--accent-glow),
+      0 0 34px var(--accent-glow),
+      0 2px 10px rgba(0, 0, 0, 0.92);
+  }
+
+  .glow-subtle {
+    text-shadow:
+      0 0 12px var(--accent-glow),
+      0 2px 8px rgba(0, 0, 0, 0.95);
+  }
+
+  /* Blinking terminal cursor */
+  @keyframes blinkCursor {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+  .cursor-blink {
+    display: inline-block;
+    animation: blinkCursor 0.92s steps(1) infinite;
+  }
+
+  /* Stylized neon monospace YES button */
+  #yesBtn {
+    background: linear-gradient(135deg, rgba(255, 42, 109, 0.34), rgba(255, 143, 179, 0.18));
+    border: 1.5px solid var(--accent-soft);
+    box-shadow:
+      0 0 22px var(--accent-glow),
+      inset 0 0 18px rgba(255, 143, 179, 0.24);
+    transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.26s ease,
+    background 0.26s ease,
+    border-color 0.26s ease;
+    transform-origin: center center;
+  }
+
+  #yesBtn:hover {
+    background: linear-gradient(135deg, rgba(255, 42, 109, 0.50), rgba(255, 143, 179, 0.28));
+  }
+
+  #yesBtn:active {
+    filter: brightness(1.16);
+  }
+
+  /* Stylized neon monospace NO button with difficulty-adaptive dart physics */
+  #noBtn {
+    --dodge-duration: 0.26s;
+    background: rgba(16, 10, 24, 0.68);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: left var(--dodge-duration) cubic-bezier(0.22, 1.28, 0.36, 1),
+    top var(--dodge-duration) cubic-bezier(0.22, 1.28, 0.36, 1),
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+    white-space: nowrap;
+    transform-origin: center center;
+  }
+
+  #noBtn.surrendered {
+    background: linear-gradient(135deg, rgba(255, 42, 109, 0.40), rgba(255, 143, 179, 0.24));
+    border: 1.5px solid var(--accent-soft);
+    color: #ffffff;
+    box-shadow:
+      0 0 26px var(--accent-glow),
+      inset 0 0 16px rgba(255, 143, 179, 0.28);
+  }
+
+  /* Floating UI hide/show transitions for spotless recording */
+  .corner-ui {
+    transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  body.controls-hidden .corner-ui {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(10px);
+  }
+
+  body.controls-hidden .corner-ui-top {
+    transform: translateY(-10px);
+  }
+
+  /* Faint restore corner trigger visible only when UI is hidden */
+  #restoreControlsBtn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.32s ease, transform 0.22s ease;
+  }
+
+  body.controls-hidden #restoreControlsBtn {
+    opacity: 0.18;
+    pointer-events: auto;
+  }
+
+  body.controls-hidden #restoreControlsBtn:hover,
+  body.controls-hidden #restoreControlsBtn:active {
+    opacity: 0.94;
+    transform: scale(1.06);
+  }
+
+  /* Stage fade transitions */
+  .stage-layer {
+    transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .stage-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: scale(0.97) translateY(8px);
+  }
+
+  /* Modals */
+  .modal-backdrop {
+    transition: opacity 0.24s ease;
+  }
+  .modal-closed {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Toast feedback */
+  #toastBanner {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #toastBanner.toast-hidden {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+    pointer-events: none;
+  }
+
+  /* Difficulty selector pills */
+  .diff-pill.active {
+    background: var(--accent-primary);
+    color: #ffffff;
+    border-color: var(--accent-soft);
+    box-shadow: 0 0 14px var(--accent-glow);
+  }
+
+  /* Gentle pulse hint */
+  @keyframes softFloat {
+    0%, 100% { opacity: 0.55; transform: translateY(0px); }
+    50% { opacity: 0.96; transform: translateY(-2px); }
+  }
+  .hint-pulse {
+    animation: softFloat 2.8s ease-in-out infinite;
+  }
+</style><style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.fixed{position:fixed}.relative{position:relative}.inset-0{inset:0px}.bottom-3{bottom:0.75rem}.left-1\/2{left:50%}.right-3{right:0.75rem}.top-3{top:0.75rem}.top-4{top:1rem}.z-10{z-index:10}.z-30{z-index:30}.z-40{z-index:40}.z-50{z-index:50}.mb-1\.5{margin-bottom:0.375rem}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.mb-4{margin-bottom:1rem}.mt-1\.5{margin-top:0.375rem}.mt-4{margin-top:1rem}.block{display:block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.h-2{height:0.5rem}.h-3{height:0.75rem}.h-3\.5{height:0.875rem}.h-4{height:1rem}.max-h-\[90dvh\]{max-height:90dvh}.min-h-\[1\.3em\]{min-height:1.3em}.min-h-\[2\.6em\]{min-height:2.6em}.w-2{width:0.5rem}.w-3{width:0.75rem}.w-3\.5{width:0.875rem}.w-4{width:1rem}.w-full{width:100%}.max-w-\[90vw\]{max-width:90vw}.max-w-\[92vw\]{max-width:92vw}.max-w-\[95vw\]{max-width:95vw}.max-w-md{max-width:28rem}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.resize-none{resize:none}.grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-2{gap:0.5rem}.gap-4{gap:1rem}.space-y-1 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.overflow-y-auto{overflow-y:auto}.rounded-2xl{border-radius:1rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-t{border-top-width:1px}.border-white\/10{border-color:rgb(255 255 255 / 0.1)}.border-white\/15{border-color:rgb(255 255 255 / 0.15)}.border-white\/20{border-color:rgb(255 255 255 / 0.2)}.border-white\/40{border-color:rgb(255 255 255 / 0.4)}.bg-black\/35{background-color:rgb(0 0 0 / 0.35)}.bg-black\/40{background-color:rgb(0 0 0 / 0.4)}.bg-black\/45{background-color:rgb(0 0 0 / 0.45)}.bg-black\/65{background-color:rgb(0 0 0 / 0.65)}.bg-white\/10{background-color:rgb(255 255 255 / 0.1)}.p-1\.5{padding:0.375rem}.p-2{padding:0.5rem}.p-2\.5{padding:0.625rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-3\.5{padding-left:0.875rem;padding-right:0.875rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.pb-20{padding-bottom:5rem}.pt-12{padding-top:3rem}.pt-2{padding-top:0.5rem}.pt-3{padding-top:0.75rem}.text-center{text-align:center}.text-2xl{font-size:1.5rem;line-height:2rem}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-normal{font-weight:400}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.leading-tight{line-height:1.25}.tracking-\[0\.13em\]{letter-spacing:0.13em}.tracking-\[0\.14em\]{letter-spacing:0.14em}.tracking-\[0\.15em\]{letter-spacing:0.15em}.tracking-\[0\.16em\]{letter-spacing:0.16em}.tracking-\[0\.2em\]{letter-spacing:0.2em}.tracking-\[0\.35em\]{letter-spacing:0.35em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-white\/35{color:rgb(255 255 255 / 0.35)}.text-white\/45{color:rgb(255 255 255 / 0.45)}.text-white\/50{color:rgb(255 255 255 / 0.5)}.text-white\/55{color:rgb(255 255 255 / 0.55)}.text-white\/60{color:rgb(255 255 255 / 0.6)}.text-white\/65{color:rgb(255 255 255 / 0.65)}.text-white\/75{color:rgb(255 255 255 / 0.75)}.text-white\/80{color:rgb(255 255 255 / 0.8)}.text-white\/85{color:rgb(255 255 255 / 0.85)}.text-white\/90{color:rgb(255 255 255 / 0.9)}.text-white\/95{color:rgb(255 255 255 / 0.95)}.placeholder-white\/30::placeholder{color:rgb(255 255 255 / 0.3)}.opacity-65{opacity:0.65}.opacity-75{opacity:0.75}.outline-none{outline:2px solid transparent;outline-offset:2px}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.hover\:bg-white\/10:hover{background-color:rgb(255 255 255 / 0.1)}.hover\:bg-white\/20:hover{background-color:rgb(255 255 255 / 0.2)}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.hover\:brightness-110:hover{--tw-brightness:brightness(1.1);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.focus\:border-white\/45:focus{border-color:rgb(255 255 255 / 0.45)}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@media (min-width: 640px){.sm\:bottom-5{bottom:1.25rem}.sm\:right-5{right:1.25rem}.sm\:top-5{top:1.25rem}.sm\:mb-4{margin-bottom:1rem}.sm\:inline{display:inline}.sm\:max-w-lg{max-width:32rem}.sm\:gap-1\.5{gap:0.375rem}.sm\:gap-7{gap:1.75rem}.sm\:p-6{padding:1.5rem}.sm\:px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.sm\:px-3\.5{padding-left:0.875rem;padding-right:0.875rem}.sm\:px-7{padding-left:1.75rem;padding-right:1.75rem}.sm\:px-8{padding-left:2rem;padding-right:2rem}.sm\:px-9{padding-left:2.25rem;padding-right:2.25rem}.sm\:py-2{padding-top:0.5rem;padding-bottom:0.5rem}.sm\:py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem}.sm\:py-6{padding-top:1.5rem;padding-bottom:1.5rem}.sm\:pb-24{padding-bottom:6rem}.sm\:pt-10{padding-top:2.5rem}.sm\:text-3xl{font-size:1.875rem;line-height:2.25rem}.sm\:text-4xl{font-size:2.25rem;line-height:2.5rem}.sm\:text-\[11px\]{font-size:11px}.sm\:text-base{font-size:1rem;line-height:1.5rem}.sm\:text-sm{font-size:0.875rem;line-height:1.25rem}.sm\:text-xs{font-size:0.75rem;line-height:1rem}}@media (min-width: 768px){.md\:inline{display:inline}.md\:text-5xl{font-size:3rem;line-height:1}}@media (min-width: 1024px){.lg\:inline{display:inline}}</style></head>
+
+
+
+
+
+<!-- Load Tailwind CSS for sleek glassmorphic HUD & modals -->
+
+
+<!-- Load Tone.js from CDN (automatic Web Audio API fallback if offline/blocked) -->
+
+
+<!-- Crisp retro-modern monospace typography -->
+
+
+
+
+
+
+<body class="">
+<!-- Full-Viewport Edge-to-Edge 3D ASCII Canvas -->
+<canvas id="sceneCanvas" aria-label="Interactive 3D ASCII Heart Proposal Scene"></canvas>
+<div class="velvet-scanlines" aria-hidden="true"></div>
+
+<!-- =========================================================================
+     TOP-CORNER SOUND TOGGLE PILL (Clear Audio State + M Shortcut)
+     ========================================================================= -->
+<div class="corner-ui corner-ui-top fixed top-3 right-3 sm:top-5 sm:right-5 z-30 flex items-center gap-2">
+  <button id="topSoundBtn" type="button" title="Toggle Sound Chimes (M)" class="glass-surface rounded-full px-3 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-semibold tracking-wider text-white/90 hover:text-white hover:bg-white/10 transition flex items-center gap-2 active:scale-95">
+    <span id="soundWaveDot" class="w-2 h-2 rounded-full transition-colors" style="background: var(--accent-soft); box-shadow: 0 0 8px var(--accent-glow);"></span>
+    <svg id="topSoundOnIcon" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+    </svg>
+    <svg id="topSoundOffIcon" class="w-3.5 h-3.5 shrink-0 hidden text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <line x1="23" y1="9" x2="17" y2="15"></line>
+      <line x1="17" y1="9" x2="23" y2="15"></line>
+    </svg>
+    <span id="topSoundLabel">SFX ON</span>
+  </button>
+</div>
+
+<!-- =========================================================================
+     STAGE 1: FLIRTY PROPOSAL OVERLAY
+     ========================================================================= -->
+<main id="proposalStage" class="stage-layer fixed inset-0 z-10 pointer-events-none flex flex-col justify-between items-center px-4 pt-12 pb-20 sm:pt-10 sm:pb-24">
+  <!-- Top: Flirty Terminal Teaser + Glowing ASCII Headline -->
+  <div class="flex flex-col items-center text-center max-w-[92vw]">
+    <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/40 border border-white/12 backdrop-blur-md mb-3 sm:mb-4">
+      <span id="statusLed" class="w-2 h-2 rounded-full" style="background: var(--accent-primary); box-shadow: 0 0 10px var(--accent-primary);"></span>
+      <span id="terminalTeaser" class="text-[11px] sm:text-xs tracking-wider text-white/85 font-medium">&gt; scanning heart rate... 140 </span>
+      <span class="cursor-blink text-xs text-white/75">_</span>
+    </div>
+
+    <div class="text-[10px] sm:text-xs tracking-[0.35em] text-white/45 uppercase mb-1.5 select-none">
+      ✦ ─── ♥ ─── ✦
+    </div>
+    <h1 id="proposalHeadline" class="glow-headline text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.13em] text-white uppercase leading-tight px-2">HEY PIDA DAN ANIS, DO YOU LOVE ME?</h1>
+    <p id="dodgeCounterNote" class="glow-subtle mt-1.5 text-[11px] sm:text-xs tracking-wider text-white/65 min-h-[1.3em] max-w-[90vw]"></p>
+  </div>
+
+  <!-- Open Center for Sculpted 3D Pulsing ASCII Heart -->
+  <div class="flex-1 w-full pointer-events-none"></div>
+
+  <!-- Bottom-Center: Interactive [ YES ♥ ] and Dodging [ NO ] Buttons -->
+  <div id="buttonAnchorRow" class="pointer-events-auto flex items-center justify-center gap-4 sm:gap-7 mb-2 sm:mb-4">
+    <button id="yesBtn" type="button" class="rounded-xl px-6 py-3 sm:px-8 sm:py-3.5 text-sm sm:text-base font-bold tracking-[0.16em] text-white cursor-pointer">
+      [ YES ♥ ]
+    </button>
+
+    <div id="noPlaceholder" class="relative flex items-center justify-center">
+
+      <button id="noBtn" type="button" class="rounded-xl px-5 py-3 sm:px-7 sm:py-3.5 text-sm sm:text-base font-semibold tracking-[0.14em] text-white/85 hover:text-white cursor-pointer">[ NO ]</button></div>
+  </div>
+</main>
+
+<!-- =========================================================================
+     STAGE 2: CELEBRATION CONFESSION OVERLAY (Triggered on YES)
+     ========================================================================= -->
+<section id="celebrationStage" class="stage-layer fixed inset-0 z-10 pointer-events-none flex flex-col justify-between items-center px-4 pt-12 pb-20 sm:pt-10 sm:pb-24 stage-hidden">
+  <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/45 border border-white/15 backdrop-blur-md">
+      <span class="text-xs tracking-widest text-white/90">
+        &gt; match_confirmed: <span style="color: var(--accent-soft);">100% ♥</span>
+      </span>
+  </div>
+
+  <!-- Open Center for Ecstatic 3D Heart + Twin Spinning 3D ASCII Roses -->
+  <div class="flex-1 w-full pointer-events-none"></div>
+
+  <!-- Typewriter Confession Card -->
+  <div class="glass-surface pointer-events-auto rounded-2xl px-6 py-5 sm:px-9 sm:py-6 max-w-[92vw] sm:max-w-lg text-center">
+    <div class="text-[11px] tracking-[0.35em] text-white/45 mb-2">♥ ✦ ♥ ✦ ♥</div>
+    <h2 id="celebrationTitle" class="glow-headline text-2xl sm:text-3xl font-extrabold tracking-[0.15em] text-white mb-2 min-h-[1.3em]">KNEW IT, IPAN ♥</h2>
+    <p id="celebrationSubline" class="text-xs sm:text-sm font-semibold tracking-wider mb-3 min-h-[1.3em]" style="color: var(--accent-soft);">Good choice. No refunds.</p>
+    <p id="celebrationMessage" class="text-xs sm:text-sm leading-relaxed text-white/88 min-h-[2.6em]">You just made my whole terminal light up. Officially, hopelessly obsessed with you.</p>
+    <div class="mt-4 pt-3 border-t border-white/10 text-[10px] sm:text-[11px] tracking-[0.2em] uppercase text-white/55 hint-pulse">
+      tap anywhere for ascii fireworks ✦
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================================
+     MINIMAL FLOATING CORNER CONTROL BAR (Auto-Hideable via H)
+     ========================================================================= -->
+<nav id="controlDock" aria-label="Scene controls" class="corner-ui fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-30 glass-surface rounded-2xl p-1.5 flex items-center flex-wrap justify-end gap-1 sm:gap-1.5 max-w-[95vw]">
+  <!-- Fullscreen Toggle (F) -->
+  <button id="fullscreenBtn" type="button" title="Toggle Fullscreen (F)" class="px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-semibold tracking-wider text-white bg-white/12 hover:bg-white/22 border border-white/15 transition flex items-center gap-1.5 active:scale-95">
+    <svg id="fsEnterIcon" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 3 21 3 21 9"></polyline>
+      <polyline points="9 21 3 21 3 15"></polyline>
+      <line x1="21" y1="3" x2="14" y2="10"></line>
+      <line x1="3" y1="21" x2="10" y2="14"></line>
+    </svg>
+    <svg id="fsExitIcon" class="w-3.5 h-3.5 shrink-0 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="4 14 10 14 10 20"></polyline>
+      <polyline points="20 10 14 10 14 4"></polyline>
+      <line x1="14" y1="10" x2="21" y2="3"></line>
+      <line x1="3" y1="21" x2="10" y2="14"></line>
+    </svg>
+    <span id="fsBtnLabel" class="hidden sm:inline">Fullscreen</span>
+  </button>
+
+  <!-- Theme Cycler (C) -->
+  <button id="themeBtn" type="button" title="Cycle Color Theme (C)" class="px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-medium text-white/85 hover:text-white hover:bg-white/12 transition flex items-center gap-1.5 active:scale-95">
+    <span id="themeSwatch" class="w-3 h-3 rounded-full shrink-0 border border-white/40" style="background: rgb(255, 102, 196);"></span>
+    <span id="themeLabel" class="hidden md:inline">Midnight Sakura</span>
+  </button>
+
+  <!-- Sound Toggle (M) -->
+  <button id="dockSoundBtn" type="button" title="Toggle Sound (M)" class="p-2 rounded-xl text-white/85 hover:text-white hover:bg-white/12 transition active:scale-95" aria-label="Toggle Sound">
+    <svg id="dockSoundOnIcon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    </svg>
+    <svg id="dockSoundOffIcon" class="w-3.5 h-3.5 hidden text-white/45" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <line x1="23" y1="9" x2="17" y2="15"></line>
+      <line x1="17" y1="9" x2="23" y2="15"></line>
+    </svg>
+  </button>
+
+  <!-- Dodge Difficulty Quick Toggle (D) -->
+  <button id="difficultyBtn" type="button" title="Cycle Dodge Difficulty (D)" class="px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-medium text-white/85 hover:text-white hover:bg-white/12 transition flex items-center gap-1 active:scale-95">
+    <span class="text-[10px] opacity-65">LVL:</span>
+    <span id="difficultyLabel" class="font-semibold" style="color: var(--accent-soft);">Chaos</span>
+  </button>
+
+  <!-- Customize Modal (E) -->
+  <button id="customizeBtn" type="button" title="Customize Name, Question &amp; Message (E)" class="p-2 sm:px-2.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-medium text-white/85 hover:text-white hover:bg-white/12 transition flex items-center gap-1.5 active:scale-95" aria-label="Customize">
+    <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9"></path>
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+    </svg>
+    <span class="hidden lg:inline">Edit</span>
+  </button>
+
+  <!-- Built-In Standalone .HTML Download Button -->
+  <button id="downloadBtn" type="button" title="Download Standalone HTML with Your Customizations" class="px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-white hover:brightness-110 transition flex items-center gap-1.5 active:scale-95 border border-white/20" style="background: linear-gradient(135deg, rgba(255,42,109,0.45), rgba(255,143,179,0.22));">
+    <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+    <span class="hidden sm:inline">.html</span>
+  </button>
+
+  <!-- Replay Proposal (R) -->
+  <button id="replayBtn" type="button" title="Replay Proposal (R)" class="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/12 transition active:scale-95" aria-label="Replay">
+    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="1 4 1 10 7 10"></polyline>
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+    </svg>
+  </button>
+
+  <!-- Hide UI Toggle (H) -->
+  <button id="hideUiBtn" type="button" title="Hide Controls (H)" class="p-2 rounded-xl text-white/75 hover:text-white hover:bg-white/12 transition active:scale-95" aria-label="Hide Controls">
+    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+      <line x1="1" y1="1" x2="23" y2="23"></line>
+    </svg>
+  </button>
+</nav>
+
+<!-- Faint Corner Restore Trigger (Visible only when controls are hidden) -->
+<button id="restoreControlsBtn" type="button" title="Show Controls (H)" aria-label="Show Controls" class="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 glass-surface rounded-full p-2.5 text-white">
+  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+</button>
+
+<!-- Non-Intrusive Toast Banner -->
+<div id="toastBanner" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[92vw] toast-hidden">
+  <div id="toastContent" class="glass-surface rounded-full px-4 py-1.5 text-[11px] sm:text-xs font-medium tracking-wider text-white/95 text-center">Personalized ♥</div>
+</div>
+
+<!-- =========================================================================
+     CUSTOMIZE / SETTINGS MODAL (E)
+     ========================================================================= -->
+<div id="customizeModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm modal-closed">
+  <div class="glass-surface rounded-2xl w-full max-w-md p-5 sm:p-6 relative max-h-[90dvh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm" style="color: var(--accent-soft);">♥</span>
+        <h3 class="text-sm sm:text-base font-bold tracking-wider text-white uppercase">Customize Proposal</h3>
+      </div>
+      <button id="closeModalBtn" type="button" aria-label="Close" class="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="space-y-4">
+      <!-- Recipient Name -->
+      <div>
+        <label for="nameInput" class="block text-[11px] uppercase tracking-widest text-white/65 mb-1.5">
+          Recipient Name <span class="text-white/35">(optional)</span>
+        </label>
+        <input id="nameInput" type="text" maxlength="24" placeholder="e.g. Maya, Babe, Alex..." class="w-full rounded-xl bg-black/45 border border-white/15 focus:border-white/45 outline-none px-3.5 py-2.5 text-sm text-white placeholder-white/30 transition" autocomplete="off">
+      </div>
+
+      <!-- Custom Proposal Question -->
+      <div>
+        <label for="questionInput" class="block text-[11px] uppercase tracking-widest text-white/65 mb-1.5">
+          Proposal Question
+        </label>
+        <input id="questionInput" type="text" maxlength="48" placeholder="DO YOU LOVE ME?" class="w-full rounded-xl bg-black/45 border border-white/15 focus:border-white/45 outline-none px-3.5 py-2.5 text-sm text-white placeholder-white/30 transition" autocomplete="off">
+      </div>
+
+      <!-- Final Confession Message -->
+      <div>
+        <label for="messageInput" class="block text-[11px] uppercase tracking-widest text-white/65 mb-1.5">
+          Final Confession Message
+        </label>
+        <textarea id="messageInput" rows="3" maxlength="180" placeholder="Write something sweet or flirty..." class="w-full rounded-xl bg-black/45 border border-white/15 focus:border-white/45 outline-none px-3.5 py-2.5 text-sm text-white placeholder-white/30 resize-none transition" autocomplete="off"></textarea>
+      </div>
+
+      <!-- Dodge Difficulty Selector -->
+      <div>
+          <span class="block text-[11px] uppercase tracking-widest text-white/65 mb-2">
+            [ NO ] Dodge Difficulty
+          </span>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" data-diff="sweet" class="diff-pill rounded-xl py-2 px-2 text-xs font-semibold border border-white/15 bg-black/35 text-white/80 hover:text-white transition">
+            Sweet<div class="text-[10px] font-normal opacity-75">3 dodges</div>
+          </button>
+          <button type="button" data-diff="flirty" class="diff-pill rounded-xl py-2 px-2 text-xs font-semibold border border-white/15 bg-black/35 text-white/80 hover:text-white transition">
+            Flirty<div class="text-[10px] font-normal opacity-75">7 dodges</div>
+          </button>
+          <button type="button" data-diff="chaos" class="diff-pill rounded-xl py-2 px-2 text-xs font-semibold border border-white/15 bg-black/35 text-white/80 hover:text-white transition active">
+            Chaos<div class="text-[10px] font-normal opacity-75">12 dodges</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Update Footer -->
+      <div class="flex items-center justify-between pt-2 border-t border-white/10">
+        <span class="text-[11px] text-white/45">Updates live &amp; saves in .html ✦</span>
+        <button id="saveModalBtn" type="button" class="rounded-xl px-5 py-2 text-xs font-bold tracking-widest uppercase text-white transition active:scale-95" style="background: var(--accent-primary); box-shadow: 0 0 18px var(--accent-glow);">
+          Done ♥
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================================
+     DOWNLOAD & COPY HTML FALLBACK MODAL
+     ========================================================================= -->
+<div id="downloadModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm modal-closed">
+  <div class="glass-surface rounded-2xl w-full max-w-md p-5 sm:p-6 relative">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-sm" style="color: var(--accent-soft);">✦</span>
+        <h3 class="text-sm sm:text-base font-bold tracking-wider text-white uppercase">Standalone File Ready</h3>
+      </div>
+      <button id="closeDownloadModalBtn" type="button" aria-label="Close" class="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <p class="text-xs leading-relaxed text-white/80 mb-3">
+      Your customized <span class="text-white font-semibold">ascii_love_proposal.html</span> (with your name, question, message, theme &amp; difficulty baked in) has been triggered for download.
+    </p>
+
+    <div class="rounded-xl bg-black/45 border border-white/10 p-3 text-[11px] leading-relaxed text-white/75 mb-4 space-y-1">
+      <div><span class="text-white font-semibold">1.</span> Double-click the downloaded <code class="text-white">.html</code> file to open it in Chrome, Safari, or Edge.</div>
+      <div><span class="text-white font-semibold">2.</span> Click <span class="text-white font-semibold">Fullscreen</span> (or press <code class="text-white">F</code>) for true edge-to-edge OS fullscreen!</div>
+    </div>
+
+    <p class="text-[11px] text-white/50 mb-3">
+      Preview blocked the automatic download? Use the Copy button below and paste into a file named <code class="text-white/80">ascii_love_proposal.html</code>:
+    </p>
+
+    <div class="flex items-center gap-2">
+      <button id="triggerBlobAgainBtn" type="button" class="flex-1 rounded-xl py-2.5 px-3 text-xs font-bold tracking-wider text-white transition active:scale-95" style="background: var(--accent-primary); box-shadow: 0 0 16px var(--accent-glow);">
+        Download .html
+      </button>
+      <button id="copyHtmlFallbackBtn" type="button" class="flex-1 rounded-xl py-2.5 px-3 text-xs font-semibold tracking-wider text-white/90 bg-white/10 hover:bg-white/20 border border-white/15 transition active:scale-95">
+        Copy HTML Code
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /**
+   * =========================================================================
+   * BAKED DEFAULT CONFIGURATION
+   * (Automatically updated with your live edits when you click Download .html)
+   * =========================================================================
+   */
+  /* __CUSTOM_CONFIG_START__ */
+    const DEFAULT_CONFIG = {
+      "recipientName": "pida dan anis",
+      "proposalQuestion": "DO YOU LOVE ME?",
+      "customMessage": "You just made my whole terminal light up. Officially, hopelessly obsessed with you.",
+      "themeIndex": 1,
+      "difficulty": "chaos"
+    };
+    /* __CUSTOM_CONFIG_END__ */
+
+  (function () {
+    'use strict';
+
+    /* -----------------------------------------------------------------------
+     * 1. CURATED AESTHETIC COLOR PALETTES (4 Themes)
+     * ----------------------------------------------------------------------- */
+    const THEMES = [
+      {
+        id: 'rose-neon',
+        name: 'Rose Neon',
+        swatch: '#ff2a6d',
+        bgAura: 'rgba(58, 12, 36, 0.50)',
+        accentPrimary: '#ff2a6d',
+        accentSoft: '#ff8fb3',
+        accentGlow: 'rgba(255, 42, 109, 0.58)',
+        core: { h: 340, s: 95, l: 34 },
+        mid:  { h: 344, s: 100, l: 56 },
+        tip:  { h: 332, s: 100, l: 84 },
+        rose: { h: 342, s: 96, l: 60 },
+        stem: { h: 152, s: 72, l: 46 }
+      },
+      {
+        id: 'midnight-sakura',
+        name: 'Midnight Sakura',
+        swatch: '#ff66c4',
+        bgAura: 'rgba(48, 14, 52, 0.50)',
+        accentPrimary: '#ff5ebc',
+        accentSoft: '#ffc4eb',
+        accentGlow: 'rgba(255, 94, 188, 0.54)',
+        core: { h: 316, s: 86, l: 42 },
+        mid:  { h: 332, s: 96, l: 72 },
+        tip:  { h: 346, s: 100, l: 93 },
+        rose: { h: 338, s: 96, l: 80 },
+        stem: { h: 162, s: 64, l: 52 }
+      },
+      {
+        id: 'cyber-violet',
+        name: 'Cyber Violet',
+        swatch: '#a855f7',
+        bgAura: 'rgba(34, 14, 68, 0.54)',
+        accentPrimary: '#a855f7',
+        accentSoft: '#67e8f9',
+        accentGlow: 'rgba(168, 85, 247, 0.58)',
+        core: { h: 266, s: 92, l: 38 },
+        mid:  { h: 278, s: 98, l: 62 },
+        tip:  { h: 192, s: 100, l: 82 },
+        rose: { h: 288, s: 96, l: 68 },
+        stem: { h: 174, s: 78, l: 50 }
+      },
+      {
+        id: 'golden-sunset',
+        name: 'Golden Sunset',
+        swatch: '#ff8c42',
+        bgAura: 'rgba(64, 24, 14, 0.48)',
+        accentPrimary: '#ff7b3a',
+        accentSoft: '#ffd166',
+        accentGlow: 'rgba(255, 138, 66, 0.56)',
+        core: { h: 8,   s: 92, l: 38 },
+        mid:  { h: 26,  s: 100, l: 58 },
+        tip:  { h: 48,  s: 100, l: 84 },
+        rose: { h: 16,  s: 96, l: 62 },
+        stem: { h: 112, s: 54, l: 46 }
+      }
+    ];
+
+    /* -----------------------------------------------------------------------
+     * 2. UPGRADED FLIRTY TERMINAL TEASERS & DODGE DIFFICULTY PROFILES
+     * ----------------------------------------------------------------------- */
+    const TERMINAL_TEASERS = [
+      '> scanning heart rate... 140 bpm',
+      '> warning: dangerously high crush levels detected',
+      '> fatal error: cannot stop thinking about you',
+      '> prompt: will you be mine?',
+      '> status: hopelessly into you ♥',
+      '> system alert: cutest person on screen detected'
+    ];
+
+    const DIFFICULTY_ORDER = ['sweet', 'flirty', 'chaos'];
+
+    const DIFFICULTIES = {
+      sweet: {
+        label: 'Sweet',
+        maxDodges: 3,
+        glideDuration: '0.38s',
+        debounceMs: 280,
+        proximityX: 40,
+        proximityY: 32,
+        yesScaleStep: 0.08,
+        shrinkSpin: false,
+        poofs: ['*poof*', 'aww~', 'shy!'],
+        labels: ['wait really?', 'are you sure?', 'pretty please?'],
+        notes: [
+          '> wait... are you sure about that?',
+          '> my little ascii heart is blushing rn',
+          '> okay truce, both buttons say yes now ♥'
+        ],
+        surrenderLabel: '[ FINE, YES ♥ ]'
+      },
+      flirty: {
+        label: 'Flirty',
+        maxDodges: 7,
+        glideDuration: '0.25s',
+        debounceMs: 220,
+        proximityX: 50,
+        proximityY: 40,
+        yesScaleStep: 0.09,
+        shrinkSpin: false,
+        poofs: ['*poof*', 'nope!', 'nice try ;)'],
+        labels: [
+          'wait really?',
+          'wrong button 👀',
+          'my ascii heart!!',
+          'too slow ;)',
+          'be honest ♥',
+          'catch me first',
+          'just click yes'
+        ],
+        notes: [
+          '> nice try... the yes button is right there',
+          '> oops, your cursor slipped 👀',
+          '> careful, you almost broke my ascii heart',
+          '> haha too slow!!',
+          '> come on, be honest with yourself ♥',
+          '> you really think you can click no?',
+          '> okay okay, truce... both buttons say yes ♥'
+        ],
+        surrenderLabel: '[ FINE, YES ♥ ]'
+      },
+      chaos: {
+        label: 'Chaos',
+        maxDodges: 12,
+        glideDuration: '0.11s',
+        debounceMs: 130,
+        proximityX: 64,
+        proximityY: 50,
+        yesScaleStep: 0.11,
+        shrinkSpin: true,
+        poofs: ['*ZOOM*', 'NOPE!', 'MISSED!', 'nice try ;)', '404 NO'],
+        labels: [
+          'nope!',
+          'too slow!!',
+          'missed me',
+          'not today',
+          'catch me!',
+          'skill issue?',
+          'still trying?',
+          'im tiny now',
+          'wheeee~',
+          'give up ♥',
+          'impossible',
+          'ok u win'
+        ],
+        notes: [
+          '> nice reflexes, still no',
+          '> error 403: rejection forbidden',
+          '> resistance is futile',
+          '> why are you chasing the no button like this',
+          '> warning: [ YES ] button growing dangerously powerful',
+          '> you cannot out-click destiny',
+          '> shrinking no button for your own good',
+          '> bro just click yes already',
+          '> literally spinning out of control rn',
+          '> 99% chance you actually love me',
+          '> just click yes already ♥',
+          '> system override: NO has been converted to YES ♥'
+        ],
+        surrenderLabel: '[ OKAY FINE, YES ♥ ]'
+      }
+    };
+
+    // Crisp ASCII luminance ramps
+    const HEART_RAMP   = ' .,:;-~=+*#%@♥';
+    const ROSE_RAMP    = ' .,:;-~=+*#%@';
+    const STEM_RAMP    = ' .,:;/|=+*#';
+    const SPARK_GLYPHS = ['♥', '♡', '✦', '*', '+', '~', '·'];
+    const PETAL_GLYPHS = ['~', '·', '*', '♡', '✦', ','];
+    const STAR_GLYPHS  = ['·', '.', '✦', '+', '°'];
+
+    const PART_HEART = 0;
+    const PART_PETAL = 1;
+    const PART_STEM  = 2;
+
+    /* -----------------------------------------------------------------------
+     * 3. SOUND ENGINE (Tone.js via CDN + Graceful Web Audio API Fallback)
+     * ----------------------------------------------------------------------- */
+    const SoundEngine = {
+      enabled: true,
+      initialized: false,
+      usingTone: false,
+      audioCtx: null,
+      sparkleSynth: null,
+      dodgeSynth: null,
+      clickSynth: null,
+      chordSynth: null,
+      pentatonic: ['C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6'],
+      pentatonicHz: [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51],
+      noteIdx: 0,
+
+      unlock() {
+        if (this.initialized) {
+          try {
+            if (this.usingTone && window.Tone && Tone.context.state !== 'running') {
+              Tone.start();
+            } else if (this.audioCtx && this.audioCtx.state === 'suspended') {
+              this.audioCtx.resume();
+            }
+          } catch (_) {}
+          return;
+        }
+
+        this.initialized = true;
+
+        // Try Tone.js first
+        if (typeof window.Tone !== 'undefined') {
+          try {
+            Tone.start();
+            const delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.24, wet: 0.22 }).toDestination();
+
+            this.sparkleSynth = new Tone.PolySynth(Tone.Synth, {
+              oscillator: { type: 'sine' },
+              envelope: { attack: 0.008, decay: 0.28, sustain: 0.02, release: 0.55 }
+            }).connect(delay);
+            this.sparkleSynth.volume.value = -13;
+
+            this.dodgeSynth = new Tone.Synth({
+              oscillator: { type: 'triangle' },
+              envelope: { attack: 0.005, decay: 0.14, sustain: 0.02, release: 0.12 }
+            }).toDestination();
+            this.dodgeSynth.volume.value = -11;
+
+            this.clickSynth = new Tone.Synth({
+              oscillator: { type: 'square' },
+              envelope: { attack: 0.001, decay: 0.018, sustain: 0, release: 0.015 }
+            }).toDestination();
+            this.clickSynth.volume.value = -24;
+
+            this.chordSynth = new Tone.PolySynth(Tone.Synth, {
+              oscillator: { type: 'triangle' },
+              envelope: { attack: 0.04, decay: 0.55, sustain: 0.25, release: 1.5 }
+            }).connect(delay);
+            this.chordSynth.volume.value = -12;
+
+            this.usingTone = true;
+            return;
+          } catch (_) {
+            this.usingTone = false;
+          }
+        }
+
+        // Graceful Web Audio API fallback if Tone.js is unavailable/offline
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) {
+            this.audioCtx = new Ctx();
+            if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+          }
+        } catch (_) {}
+      },
+
+      // 1. Soft glassy pentatonic chime on background sparkle tap
+      playSparkleChime(highBias) {
+        if (!this.enabled) return;
+        this.unlock();
+        const idx = highBias
+          ? (4 + Math.floor(Math.random() * 4))
+          : (this.noteIdx++ % this.pentatonic.length);
+
+        if (this.usingTone && this.sparkleSynth) {
+          try {
+            const note = this.pentatonic[idx];
+            this.sparkleSynth.triggerAttackRelease(note, '8n');
+            return;
+          } catch (_) {}
+        }
+
+        if (this.audioCtx) {
+          this._fallbackTone(this.pentatonicHz[idx], 'sine', 0.09, 0.34);
+        }
+      },
+
+      // 2. Playful pitched boing/bloop when [ NO ] dodges (higher each dodge!)
+      playDodgeBoing(dodgeCount) {
+        if (!this.enabled) return;
+        this.unlock();
+        const startFreq = 260 * Math.pow(1.09, Math.min(dodgeCount, 12));
+        const endFreq = startFreq * 1.55;
+
+        if (this.usingTone && this.dodgeSynth) {
+          try {
+            const now = Tone.now();
+            this.dodgeSynth.triggerAttack(startFreq, now);
+            this.dodgeSynth.frequency.exponentialRampTo(endFreq, 0.11, now);
+            this.dodgeSynth.triggerRelease(now + 0.13);
+            return;
+          } catch (_) {}
+        }
+
+        if (this.audioCtx) {
+          try {
+            const t = this.audioCtx.currentTime;
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(startFreq, t);
+            osc.frequency.exponentialRampToValueAtTime(endFreq, t + 0.11);
+            gain.gain.setValueAtTime(0.11, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+            osc.connect(gain);
+            gain.connect(this.audioCtx.destination);
+            osc.start(t);
+            osc.stop(t + 0.15);
+          } catch (_) {}
+        }
+      },
+
+      // 3. Subtle mechanical terminal keyclick during typewriter confession
+      playKeyClick() {
+        if (!this.enabled) return;
+        this.unlock();
+        const freq = 980 + Math.random() * 240;
+
+        if (this.usingTone && this.clickSynth) {
+          try {
+            this.clickSynth.triggerAttackRelease(freq, 0.015);
+            return;
+          } catch (_) {}
+        }
+
+        if (this.audioCtx) {
+          this._fallbackTone(freq, 'square', 0.025, 0.022);
+        }
+      },
+
+      // 4. Warm dreamy romantic chord arpeggio on [ YES ♥ ]
+      playCelebrationChord() {
+        if (!this.enabled) return;
+        this.unlock();
+        const notes = ['F4', 'A4', 'C5', 'E5', 'G5', 'A5', 'C6'];
+        const freqs = [349.23, 440.0, 523.25, 659.25, 783.99, 880.0, 1046.5];
+
+        if (this.usingTone && this.chordSynth) {
+          try {
+            const now = Tone.now();
+            notes.forEach((n, i) => {
+              this.chordSynth.triggerAttackRelease(n, '2n', now + i * 0.085);
+            });
+            // Extra shimmer top notes
+            if (this.sparkleSynth) {
+              ['E6', 'G6', 'C6'].forEach((n, i) => {
+                this.sparkleSynth.triggerAttackRelease(n, '8n', now + 0.55 + i * 0.11);
+              });
+            }
+            return;
+          } catch (_) {}
+        }
+
+        if (this.audioCtx) {
+          freqs.forEach((f, i) => {
+            setTimeout(() => this._fallbackTone(f, 'triangle', 0.08, 0.9), i * 85);
+          });
+        }
+      },
+
+      _fallbackTone(freq, type, peakGain, duration) {
+        try {
+          const t = this.audioCtx.currentTime;
+          const osc = this.audioCtx.createOscillator();
+          const gain = this.audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.linearRampToValueAtTime(peakGain, t + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+          osc.connect(gain);
+          gain.connect(this.audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + duration + 0.02);
+        } catch (_) {}
+      }
+    };
+
+    // Auto-unlock audio cleanly on first interaction anywhere
+    window.addEventListener('pointerdown', () => SoundEngine.unlock(), { once: true, passive: true });
+    window.addEventListener('keydown', () => SoundEngine.unlock(), { once: true, passive: true });
+
+    /* -----------------------------------------------------------------------
+     * 4. MATH & GEOMETRY UTILITIES
+     * ----------------------------------------------------------------------- */
+    function clamp(v, lo, hi) {
+      return v < lo ? lo : (v > hi ? hi : v);
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function lerpHue(h1, h2, t) {
+      const diff = ((h2 - h1 + 540) % 360) - 180;
+      return (h1 + diff * t + 360) % 360;
+    }
+
+    function lerpHSL(c1, c2, t) {
+      return {
+        h: lerpHue(c1.h, c2.h, t),
+        s: lerp(c1.s, c2.s, t),
+        l: lerp(c1.l, c2.l, t)
+      };
+    }
+
+    function mulberry32(seed) {
+      let a = seed >>> 0;
+      return function () {
+        a |= 0;
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function springBloomEase(t) {
+      if (t <= 0) return 0.001;
+      if (t >= 1) return 1;
+      return 1 - Math.pow(2, -8 * t) * Math.cos(t * 9.2);
+    }
+
+    function packGeometry(rawPts, seed) {
+      const rand = mulberry32(seed);
+      const count = rawPts.length;
+      for (let i = count - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        const tmp = rawPts[i];
+        rawPts[i] = rawPts[j];
+        rawPts[j] = tmp;
+      }
+
+      const x    = new Float32Array(count);
+      const y    = new Float32Array(count);
+      const z    = new Float32Array(count);
+      const nx   = new Float32Array(count);
+      const ny   = new Float32Array(count);
+      const nz   = new Float32Array(count);
+      const grad = new Float32Array(count);
+      const part = new Uint8Array(count);
+
+      for (let i = 0; i < count; i++) {
+        const p = rawPts[i];
+        x[i] = p.x;
+        y[i] = p.y;
+        z[i] = p.z;
+        const len = Math.hypot(p.nx, p.ny, p.nz) || 1;
+        nx[i] = p.nx / len;
+        ny[i] = p.ny / len;
+        nz[i] = p.nz / len;
+        grad[i] = clamp(p.grad, 0, 1);
+        part[i] = p.part;
+      }
+      return { count, x, y, z, nx, ny, nz, grad, part };
+    }
+
+    /* -----------------------------------------------------------------------
+     * 5. SCULPTED 3D HEART & TWIN 3D ROSE GEOMETRIES
+     * ----------------------------------------------------------------------- */
+    function create3DHeartGeometry() {
+      const pts = [];
+      const cy = -0.10;
+
+      function heartSurface(t, phi) {
+        const st = Math.sin(t);
+        const hx = Math.pow(st, 3);
+        const hy = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16 + 0.14;
+        const cp = Math.cos(phi);
+        const sp = Math.sin(phi);
+        const radial = Math.pow(Math.max(0, cp), 0.78);
+        const cleft = 1 - 0.16 * Math.exp(-Math.pow(Math.sin(t * 0.5), 2) * 18) * (1 - radial * 0.4);
+        return [
+          hx * radial,
+          cy + (hy - cy) * radial,
+          sp * 0.52 * cleft * (0.76 + 0.24 * Math.pow(Math.abs(cp), 0.6))
+        ];
+      }
+
+      const tSteps = 84;
+      const phiSteps = 44;
+      const eps = 0.012;
+
+      for (let ip = 1; ip < phiSteps; ip++) {
+        const phi = -Math.PI * 0.495 + (ip / phiSteps) * Math.PI * 0.99;
+        const ringScale = Math.max(0.22, Math.cos(phi));
+        const localTSteps = Math.max(16, Math.round(tSteps * ringScale));
+
+        for (let it = 0; it < localTSteps; it++) {
+          const t = (it / localTSteps) * Math.PI * 2;
+          const p0 = heartSurface(t, phi);
+          const pt = heartSurface(t + eps, phi);
+          const pp = heartSurface(t, phi + eps);
+
+          const utx = pt[0] - p0[0], uty = pt[1] - p0[1], utz = pt[2] - p0[2];
+          const upx = pp[0] - p0[0], upy = pp[1] - p0[1], upz = pp[2] - p0[2];
+
+          let nx = uty * upz - utz * upy;
+          let ny = utz * upx - utx * upz;
+          let nz = utx * upy - uty * upx;
+
+          if (nx * p0[0] + ny * (p0[1] - cy) + nz * p0[2] < 0) {
+            nx = -nx; ny = -ny; nz = -nz;
+          }
+
+          pts.push({
+            x: p0[0], y: p0[1], z: p0[2],
+            nx, ny, nz,
+            grad: clamp(Math.cos(phi) * 0.82 + (p0[1] + 0.8) * 0.14, 0, 1),
+            part: PART_HEART
+          });
+        }
+      }
+      return packGeometry(pts, 777);
+    }
+
+    function create3DRoseGeometry() {
+      const pts = [];
+      const eps = 0.018;
+
+      function samplePatch(uSteps, vSteps, fn, partType, gradFn) {
+        for (let iu = 0; iu <= uSteps; iu++) {
+          const u = iu / uSteps;
+          for (let iv = 0; iv <= vSteps; iv++) {
+            const v = (iv / vSteps) * 2 - 1;
+            const p0 = fn(u, v);
+            const pu = fn(Math.min(1, u + eps), v);
+            const pv = fn(u, Math.min(1, v + eps));
+            const tx = pu[0] - p0[0], ty = pu[1] - p0[1], tz = pu[2] - p0[2];
+            const bx = pv[0] - p0[0], by = pv[1] - p0[1], bz = pv[2] - p0[2];
+            pts.push({
+              x: p0[0], y: p0[1], z: p0[2],
+              nx: ty * bz - tz * by,
+              ny: tz * bx - tx * bz,
+              nz: tx * by - ty * bx,
+              grad: gradFn(u, v),
+              part: partType
+            });
+          }
+        }
+      }
+
+      const tiers = [
+        { count: 5, r0: 0.06, len: 0.36, pitch: 0.22, width: 0.24, yOff: 0.12, t: 0.0 },
+        { count: 6, r0: 0.12, len: 0.50, pitch: 0.55, width: 0.32, yOff: 0.06, t: 0.35 },
+        { count: 7, r0: 0.18, len: 0.64, pitch: 0.88, width: 0.38, yOff: 0.00, t: 0.70 },
+        { count: 8, r0: 0.22, len: 0.76, pitch: 1.18, width: 0.42, yOff: -0.05, t: 1.0 }
+      ];
+
+      for (let ti = 0; ti < tiers.length; ti++) {
+        const L = tiers[ti];
+        const phase = ti * 2.39996;
+        for (let p = 0; p < L.count; p++) {
+          const ang = phase + (p / L.count) * Math.PI * 2;
+          const ca = Math.cos(ang), sa = Math.sin(ang);
+          samplePatch(7, 5, (u, v) => {
+            const curl = Math.max(0, u - 0.55) * (1.2 + 0.6 * L.t);
+            const theta = L.pitch + u * (0.42 + 0.22 * L.t) + curl;
+            const rad = L.r0 + Math.sin(theta) * u * L.len;
+            const hY = L.yOff + Math.cos(theta * 0.84) * u * L.len * 0.85;
+            const halfW = Math.sin(Math.PI * Math.pow(u, 0.64)) * L.width;
+            const cup = -(1 - v * v) * 0.10 * Math.sin(Math.PI * u);
+            const lx = rad + cup;
+            const lz = v * halfW;
+            return [lx * ca - lz * sa, hY, lx * sa + lz * ca];
+          }, PART_PETAL, (u) => clamp(0.18 + L.t * 0.25 + u * 0.6, 0, 1));
+        }
+      }
+
+      // Curved stem & leaves
+      for (let i = 0; i <= 22; i++) {
+        const t = i / 22;
+        const sy = -0.08 - t * 1.25;
+        const sx = Math.sin(t * 2.4) * 0.10;
+        const sz = Math.cos(t * 2.0) * 0.06 - 0.06;
+        for (let j = 0; j < 5; j++) {
+          const a = (j / 5) * Math.PI * 2;
+          pts.push({
+            x: sx + Math.cos(a) * 0.04, y: sy, z: sz + Math.sin(a) * 0.04,
+            nx: Math.cos(a), ny: 0.1, nz: Math.sin(a),
+            grad: 1 - t * 0.55, part: PART_STEM
+          });
+        }
+      }
+      [
+        { t: 0.42, yaw: 0.45, size: 0.45 },
+        { t: 0.70, yaw: 3.60, size: 0.38 }
+      ].forEach((lf) => {
+        const ox = Math.sin(lf.t * 2.4) * 0.10;
+        const oy = -0.08 - lf.t * 1.25;
+        const oz = Math.cos(lf.t * 2.0) * 0.06 - 0.06;
+        const cy = Math.cos(lf.yaw), sy = Math.sin(lf.yaw);
+        samplePatch(7, 4, (u, v) => {
+          const lx = u * lf.size;
+          const ly = Math.sin(u * Math.PI * 0.8) * 0.12 * lf.size - u * u * 0.08 * lf.size;
+          const lz = v * Math.sin(Math.PI * Math.pow(u, 0.72)) * 0.18 * lf.size;
+          return [ox + lx * cy - lz * sy, oy + ly, oz + lx * sy + lz * cy];
+        }, PART_STEM, (u) => clamp(0.4 + u * 0.6, 0, 1));
+      });
+
+      return packGeometry(pts, 999);
+    }
+
+    const HEART_GEOM = create3DHeartGeometry();
+    const ROSE_GEOM  = create3DRoseGeometry();
+
+    /* -----------------------------------------------------------------------
+     * 6. GLOBAL STATE (Hydrated from DEFAULT_CONFIG)
+     * ----------------------------------------------------------------------- */
+    const canvas = document.getElementById('sceneCanvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    const glowCanvas1 = document.createElement('canvas');
+    const glowCtx1    = glowCanvas1.getContext('2d');
+    const glowCanvas2 = document.createElement('canvas');
+    const glowCtx2    = glowCanvas2.getContext('2d');
+
+    const initThemeIdx = clamp(parseInt(DEFAULT_CONFIG.themeIndex, 10) || 0, 0, THEMES.length - 1);
+    const initDiff     = DIFFICULTIES[DEFAULT_CONFIG.difficulty] ? DEFAULT_CONFIG.difficulty : 'flirty';
+
+    const state = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      dpr: Math.min(window.devicePixelRatio || 1, 2),
+
+      cellW: 8,
+      cellH: 13,
+      fontSize: 12,
+      cols: 120,
+      rows: 60,
+
+      zBuffer: null,
+      charBuf: null,
+      colorBuf: null,
+      dirtyFlags: null,
+      activeCells: null,
+      activeCount: 0,
+
+      themeIndex: initThemeIdx,
+      targetTheme: THEMES[initThemeIdx],
+      colors: {
+        core: { ...THEMES[initThemeIdx].core },
+        mid:  { ...THEMES[initThemeIdx].mid },
+        tip:  { ...THEMES[initThemeIdx].tip },
+        rose: { ...THEMES[initThemeIdx].rose },
+        stem: { ...THEMES[initThemeIdx].stem }
+      },
+
+      stage: 'proposal', // 'proposal' | 'celebration'
+      difficulty: initDiff,
+      dodgeCount: 0,
+      noDetached: false,
+      noSurrendered: false,
+      noSpinAngle: 0,
+      lastDodgeTime: 0,
+      heartFlutter: 0,
+      roseBloomProgress: 0,
+
+      // User-customizable copy (baked into downloaded .html)
+      recipientName: DEFAULT_CONFIG.recipientName || '',
+      proposalQuestion: DEFAULT_CONFIG.proposalQuestion || 'DO YOU LOVE ME?',
+      customMessage: DEFAULT_CONFIG.customMessage || 'You just made my whole terminal light up. Officially, hopelessly obsessed with you.',
+
+      // 3D interactive viewing angles
+      viewYaw: 0,
+      viewPitch: 0.08,
+      targetYaw: 0,
+      targetPitch: 0.08,
+      dragYawOffset: 0,
+      dragPitchOffset: 0,
+      heartSpin: 0,
+      roseSpin: 0,
+
+      // Ambient & celebration particles
+      stars: [],
+      petals: [],
+      floatingHearts: [],
+      burstParticles: [],
+      fireworkParticles: [],
+      rainHearts: [],
+      poofTexts: [],
+
+      time: 0,
+      lastTime: 0,
+      nextAutoFirework: 0,
+      controlsHidden: false,
+      modalOpen: false,
+      lastGeneratedHtml: ''
+    };
+
+    /* -----------------------------------------------------------------------
+     * 7. RESPONSIVE CANVAS RESIZING & EDGE-TO-EDGE AMBIENT PARTICLES
+     * ----------------------------------------------------------------------- */
+    function resizeCanvas() {
+      state.width  = window.innerWidth;
+      state.height = window.innerHeight;
+      state.dpr    = Math.min(window.devicePixelRatio || 1, 2);
+
+      canvas.width  = Math.floor(state.width * state.dpr);
+      canvas.height = Math.floor(state.height * state.dpr);
+      ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+
+      glowCanvas1.width  = Math.max(2, Math.floor(state.width / 3));
+      glowCanvas1.height = Math.max(2, Math.floor(state.height / 3));
+      glowCanvas2.width  = Math.max(2, Math.floor(state.width / 7));
+      glowCanvas2.height = Math.max(2, Math.floor(state.height / 7));
+
+      const minDim = Math.min(state.width, state.height);
+      if (minDim < 500) {
+        state.fontSize = 10;
+        state.cellW = 6.6;
+        state.cellH = 10.6;
+      } else if (minDim < 820) {
+        state.fontSize = 11.5;
+        state.cellW = 7.6;
+        state.cellH = 12.2;
+      } else {
+        state.fontSize = 13;
+        state.cellW = 8.4;
+        state.cellH = 13.6;
+      }
+
+      state.cols = Math.ceil(state.width / state.cellW);
+      state.rows = Math.ceil(state.height / state.cellH);
+      const total = state.cols * state.rows;
+
+      state.zBuffer     = new Float32Array(total);
+      state.charBuf     = new Array(total);
+      state.colorBuf    = new Array(total);
+      state.dirtyFlags  = new Uint8Array(total);
+      state.activeCells = new Int32Array(total);
+      state.activeCount = 0;
+      state.zBuffer.fill(-1e9);
+
+      seedEdgeToEdgeAmbient();
+
+      if (state.noDetached && state.stage === 'proposal') {
+        clampNoButtonToViewport();
+      }
+    }
+
+    function seedEdgeToEdgeAmbient() {
+      const area = state.width * state.height;
+      const starCount  = clamp(Math.floor(area / 18000), 34, 95);
+      const petalCount = clamp(Math.floor(area / 42000), 16, 44);
+      const heartCount = clamp(Math.floor(area / 62000), 12, 32);
+
+      state.stars = [];
+      for (let i = 0; i < starCount; i++) {
+        state.stars.push({
+          x: Math.random() * state.width,
+          y: Math.random() * state.height,
+          phase: Math.random() * Math.PI * 2,
+          speed: 1.1 + Math.random() * 2.2,
+          glyph: STAR_GLYPHS[i % STAR_GLYPHS.length],
+          size: Math.random() > 0.72 ? 13 : 10,
+          alpha: 0.14 + Math.random() * 0.34
+        });
+      }
+
+      state.petals = [];
+      for (let i = 0; i < petalCount; i++) {
+        state.petals.push({
+          x: Math.random() * state.width,
+          y: Math.random() * state.height,
+          vx: -10 + Math.random() * 26,
+          vy: 14 + Math.random() * 26,
+          swayAmp: 14 + Math.random() * 24,
+          swayFreq: 0.7 + Math.random() * 1.1,
+          phase: Math.random() * Math.PI * 2,
+          glyph: PETAL_GLYPHS[i % PETAL_GLYPHS.length],
+          hueOff: (Math.random() - 0.5) * 30,
+          alpha: 0.22 + Math.random() * 0.36
+        });
+      }
+
+      state.floatingHearts = [];
+      for (let i = 0; i < heartCount; i++) {
+        state.floatingHearts.push({
+          x: Math.random() * state.width,
+          y: Math.random() * state.height,
+          vy: -(12 + Math.random() * 22),
+          phase: Math.random() * Math.PI * 2,
+          glyph: Math.random() > 0.38 ? '♥' : '♡',
+          size: 10 + Math.random() * 6,
+          hueOff: (Math.random() - 0.5) * 28,
+          alpha: 0.18 + Math.random() * 0.34
+        });
+      }
+    }
+
+    /* -----------------------------------------------------------------------
+     * 8. PARTICLE SPAWNERS (Sparkles, Poofs, Fireworks, Rain)
+     * ----------------------------------------------------------------------- */
+    function spawnHeartSparkleBurst(x, y, count) {
+      const total = count || 18;
+      for (let i = 0; i < total; i++) {
+        const ang = (i / total) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+        const spd = 55 + Math.random() * 145;
+        state.burstParticles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd - 24,
+          life: 1.0,
+          decay: 0.95 + Math.random() * 0.65,
+          glyph: SPARK_GLYPHS[Math.floor(Math.random() * SPARK_GLYPHS.length)],
+          size: 12 + Math.random() * 6,
+          hueOff: (Math.random() - 0.5) * 44
+        });
+      }
+    }
+
+    function spawnNoButtonPoof(x, y, poofLabel) {
+      const poofGlyphs = ['*', '~', '✦', '♡', '°', '+'];
+      for (let i = 0; i < 12; i++) {
+        const ang = (i / 12) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+        const spd = 42 + Math.random() * 90;
+        state.burstParticles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: 0.95,
+          decay: 1.45 + Math.random() * 0.5,
+          glyph: poofGlyphs[i % poofGlyphs.length],
+          size: 11 + Math.random() * 4,
+          hueOff: (Math.random() - 0.5) * 35
+        });
+      }
+      state.poofTexts.push({
+        x, y,
+        text: poofLabel || '*poof*',
+        life: 1.0
+      });
+    }
+
+    function spawnASCIIFirework(x, y, playChime) {
+      const fwGlyphs = ['*', '+', '✦', '♥', '♡', '#', '°', '·'];
+      const ringCount = 30;
+      const baseHue = (state.colors.mid.h + (Math.random() - 0.5) * 95 + 360) % 360;
+      const secondaryHue = (baseHue + 45 + Math.random() * 60) % 360;
+
+      for (let i = 0; i < ringCount; i++) {
+        const ang = (i / ringCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.14;
+        const spd = 95 + Math.random() * 175;
+        state.fireworkParticles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: 1.0,
+          decay: 0.55 + Math.random() * 0.42,
+          glyph: fwGlyphs[i % fwGlyphs.length],
+          size: 12 + Math.random() * 6,
+          hue: i % 3 === 0 ? secondaryHue : baseHue
+        });
+      }
+
+      for (let i = 0; i < 14; i++) {
+        const t = (i / 14) * Math.PI * 2;
+        const hx = Math.pow(Math.sin(t), 3);
+        const hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16;
+        state.fireworkParticles.push({
+          x, y,
+          vx: hx * 115,
+          vy: hy * 115,
+          life: 1.0,
+          decay: 0.52 + Math.random() * 0.25,
+          glyph: i % 2 === 0 ? '♥' : '♡',
+          size: 13,
+          hue: secondaryHue
+        });
+      }
+
+      if (playChime) {
+        SoundEngine.playSparkleChime(true);
+      }
+    }
+
+    function spawnCelebrationRain() {
+      const target = clamp(Math.floor(state.width / 26), 24, 64);
+      state.rainHearts = [];
+      for (let i = 0; i < target; i++) {
+        state.rainHearts.push({
+          x: Math.random() * state.width,
+          y: -Math.random() * state.height * 0.9,
+          vy: 65 + Math.random() * 95,
+          vx: (Math.random() - 0.5) * 24,
+          phase: Math.random() * Math.PI * 2,
+          glyph: i % 3 === 0 ? '✦' : (i % 2 === 0 ? '♥' : '♡'),
+          size: 11 + Math.random() * 7,
+          hueOff: (Math.random() - 0.5) * 65,
+          alpha: 0.45 + Math.random() * 0.45
+        });
+      }
+    }
+
+    /* -----------------------------------------------------------------------
+     * 9. COLOR LUT & 3D ASCII Z-BUFFER RENDERER
+     * ----------------------------------------------------------------------- */
+    function buildPaletteLUT() {
+      const c = state.colors;
+      const lumSteps = 12;
+      const gradBands = 4;
+
+      const heartLUT = new Array(gradBands * lumSteps);
+      const roseLUT  = new Array(gradBands * lumSteps);
+      const stemLUT  = new Array(lumSteps);
+
+      for (let g = 0; g < gradBands; g++) {
+        const gt = g / (gradBands - 1);
+        const hBase = gt < 0.5
+          ? lerpHSL(c.core, c.mid, gt * 2)
+          : lerpHSL(c.mid, c.tip, (gt - 0.5) * 2);
+        const rBase = lerpHSL(c.core, c.rose, 0.35 + gt * 0.65);
+
+        for (let li = 0; li < lumSteps; li++) {
+          const lt = li / (lumSteps - 1);
+          const hl = clamp(hBase.l * (0.34 + lt * 0.88) + lt * lt * 14, 14, 96);
+          const rl = clamp(rBase.l * (0.36 + lt * 0.86) + lt * lt * 12, 15, 95);
+          heartLUT[g * lumSteps + li] = `hsl(${((hBase.h + 360) % 360).toFixed(0)},${clamp(hBase.s, 45, 100).toFixed(0)}%,${hl.toFixed(0)}%)`;
+          roseLUT[g * lumSteps + li]  = `hsl(${((rBase.h + 360) % 360).toFixed(0)},${clamp(rBase.s, 45, 100).toFixed(0)}%,${rl.toFixed(0)}%)`;
+        }
+      }
+
+      for (let li = 0; li < lumSteps; li++) {
+        const lt = li / (lumSteps - 1);
+        const sl = clamp(c.stem.l * (0.38 + lt * 0.86), 16, 82);
+        stemLUT[li] = `hsl(${c.stem.h.toFixed(0)},${c.stem.s.toFixed(0)}%,${sl.toFixed(0)}%)`;
+      }
+
+      return { heartLUT, roseLUT, stemLUT, lumSteps, gradBands };
+    }
+
+    const L1x = 0.42, L1y = 0.58, L1z = 0.70;
+    const L2x = -0.58, L2y = -0.25, L2z = 0.77;
+
+    function projectObjectToZBuffer(geom, opts, lut) {
+      const cols = state.cols;
+      const rows = state.rows;
+      const cellW = state.cellW;
+      const cellH = state.cellH;
+      const zBuf = state.zBuffer;
+      const charBuf = state.charBuf;
+      const colorBuf = state.colorBuf;
+      const dirtyFlags = state.dirtyFlags;
+      const activeCells = state.activeCells;
+
+      const { originX, originY, pixelScale, rotY, rotX, rotZ, zBias, isHeart, unfurl, lod } = opts;
+      if (pixelScale < 4) return;
+
+      const cy = Math.cos(rotY), sy = Math.sin(rotY);
+      const cx = Math.cos(rotX), sx = Math.sin(rotX);
+      const cz = Math.cos(rotZ), sz = Math.sin(rotZ);
+
+      const m00 = cz * cy - sz * sx * sy;
+      const m01 = -sz * cx;
+      const m02 = cz * sy + sz * sx * cy;
+
+      const m10 = sz * cy + cz * sx * sy;
+      const m11 = cz * cx;
+      const m12 = sz * sy - cz * sx * cy;
+
+      const m20 = -cx * sy;
+      const m21 = sx;
+      const m22 = cx * cy;
+
+      const fov = 4.2;
+      const totalPts = Math.floor(geom.count * (lod || 1));
+      const gx = geom.x, gy = geom.y, gz = geom.z;
+      const gnx = geom.nx, gny = geom.ny, gnz = geom.nz;
+      const gGrad = geom.grad, gPart = geom.part;
+
+      const lumSteps = lut.lumSteps;
+      const lumM1 = lumSteps - 1;
+      const gradBands = lut.gradBands;
+      const gradM1 = gradBands - 1;
+
+      const heartRampLen = HEART_RAMP.length - 1;
+      const roseRampLen  = ROSE_RAMP.length - 1;
+      const stemRampLen  = STEM_RAMP.length - 1;
+
+      const radialUnfurl = unfurl !== undefined ? (0.35 + 0.65 * unfurl) : 1.0;
+
+      for (let i = 0; i < totalPts; i++) {
+        const pType = gPart[i];
+        let px = gx[i];
+        let py = gy[i];
+        let pz = gz[i];
+
+        if (!isHeart && pType === PART_PETAL && radialUnfurl < 0.999) {
+          px *= radialUnfurl;
+          pz *= radialUnfurl;
+        }
+
+        const rx = m00 * px + m01 * py + m02 * pz;
+        const ry = m10 * px + m11 * py + m12 * pz;
+        const rz = m20 * px + m21 * py + m22 * pz;
+
+        const persp = fov / (fov - rz);
+        const sxPx = originX + rx * pixelScale * persp;
+        const syPx = originY - ry * pixelScale * persp;
+
+        const col = (sxPx / cellW) | 0;
+        const row = (syPx / cellH) | 0;
+        if (col < 0 || col >= cols || row < 0 || row >= rows) continue;
+
+        const idx = row * cols + col;
+        const zDepth = rz + zBias;
+        if (zDepth <= zBuf[idx]) continue;
+
+        const nx0 = gnx[i], ny0 = gny[i], nz0 = gnz[i];
+        const rnx = m00 * nx0 + m01 * ny0 + m02 * nz0;
+        const rny = m10 * nx0 + m11 * ny0 + m12 * nz0;
+        const rnz = m20 * nx0 + m21 * ny0 + m22 * nz0;
+
+        const d1 = rnx * L1x + rny * L1y + rnz * L1z;
+        const diff1 = isHeart ? Math.max(0, d1) : (d1 >= 0 ? d1 : -d1 * 0.72);
+        const diff2 = Math.max(0, rnx * L2x + rny * L2y + rnz * L2z);
+        const rim = Math.pow(1 - Math.min(1, Math.abs(rnz)), 1.9) * 0.42;
+        const spec = isHeart ? Math.pow(Math.max(0, d1), 10) * 0.34 : 0;
+
+        const gv = gGrad[i];
+        let lum = clamp(0.14 + diff1 * 0.56 + diff2 * 0.16 + rim + spec + gv * 0.10, 0.08, 1.0);
+
+        const lumIdx = Math.min(lumM1, (lum * lumSteps) | 0);
+        const gBand  = Math.min(gradM1, (gv * gradBands) | 0);
+
+        let ch, colorStr;
+        if (pType === PART_HEART) {
+          ch = HEART_RAMP[Math.min(heartRampLen, Math.max(1, (lum * HEART_RAMP.length) | 0))];
+          colorStr = lut.heartLUT[gBand * lumSteps + lumIdx];
+        } else if (pType === PART_PETAL) {
+          ch = ROSE_RAMP[Math.min(roseRampLen, Math.max(1, (lum * ROSE_RAMP.length) | 0))];
+          colorStr = lut.roseLUT[gBand * lumSteps + lumIdx];
+        } else {
+          ch = STEM_RAMP[Math.min(stemRampLen, Math.max(1, (lum * STEM_RAMP.length) | 0))];
+          colorStr = lut.stemLUT[lumIdx];
+        }
+
+        zBuf[idx] = zDepth;
+        charBuf[idx] = ch;
+        colorBuf[idx] = colorStr;
+
+        if (!dirtyFlags[idx]) {
+          dirtyFlags[idx] = 1;
+          activeCells[state.activeCount++] = idx;
+        }
+      }
+    }
+
+    /* -----------------------------------------------------------------------
+     * 10. 60 FPS ANIMATION & RENDER LOOP
+     * ----------------------------------------------------------------------- */
+    function update(dt) {
+      state.time += dt;
+
+      const blend = Math.min(1, dt * 4.5);
+      const tt = state.targetTheme;
+      state.colors.core = lerpHSL(state.colors.core, tt.core, blend);
+      state.colors.mid  = lerpHSL(state.colors.mid,  tt.mid,  blend);
+      state.colors.tip  = lerpHSL(state.colors.tip,  tt.tip,  blend);
+      state.colors.rose = lerpHSL(state.colors.rose, tt.rose, blend);
+      state.colors.stem = lerpHSL(state.colors.stem, tt.stem, blend);
+
+      state.viewYaw   = lerp(state.viewYaw,   state.targetYaw + state.dragYawOffset,     Math.min(1, dt * 6.5));
+      state.viewPitch = lerp(state.viewPitch, state.targetPitch + state.dragPitchOffset, Math.min(1, dt * 6.5));
+
+      const isCeleb = state.stage === 'celebration';
+      state.heartSpin += dt * (isCeleb ? 0.92 : 0.56);
+      state.roseSpin  += dt * 0.72;
+
+      if (state.heartFlutter > 0) {
+        state.heartFlutter = Math.max(0, state.heartFlutter - dt * 2.4);
+      }
+
+      if (isCeleb) {
+        state.roseBloomProgress = Math.min(1, state.roseBloomProgress + dt * 0.95);
+        if (state.time >= state.nextAutoFirework) {
+          const fx = state.width  * (0.10 + Math.random() * 0.80);
+          const fy = state.height * (0.12 + Math.random() * 0.46);
+          spawnASCIIFirework(fx, fy, Math.random() > 0.45);
+          state.nextAutoFirework = state.time + 0.9 + Math.random() * 0.95;
+        }
+      } else {
+        state.roseBloomProgress = Math.max(0, state.roseBloomProgress - dt * 2.5);
+      }
+
+      for (let i = 0; i < state.petals.length; i++) {
+        const p = state.petals[i];
+        p.y += p.vy * dt;
+        p.x += (p.vx + Math.sin(state.time * p.swayFreq + p.phase) * p.swayAmp) * dt;
+        if (p.y > state.height + 16) { p.y = -16; p.x = Math.random() * state.width; }
+        if (p.x > state.width + 16) p.x = -16;
+        if (p.x < -16) p.x = state.width + 16;
+      }
+
+      for (let i = 0; i < state.floatingHearts.length; i++) {
+        const h = state.floatingHearts[i];
+        h.y += h.vy * dt;
+        h.x += Math.sin(state.time * 1.1 + h.phase) * 14 * dt;
+        if (h.y < -18) { h.y = state.height + 18; h.x = Math.random() * state.width; }
+      }
+
+      for (let i = state.burstParticles.length - 1; i >= 0; i--) {
+        const b = state.burstParticles[i];
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.vx *= Math.pow(0.18, dt);
+        b.vy *= Math.pow(0.18, dt);
+        b.vy += 32 * dt;
+        b.life -= b.decay * dt;
+        if (b.life <= 0) state.burstParticles.splice(i, 1);
+      }
+
+      for (let i = state.poofTexts.length - 1; i >= 0; i--) {
+        const pt = state.poofTexts[i];
+        pt.y -= 36 * dt;
+        pt.life -= dt * 1.35;
+        if (pt.life <= 0) state.poofTexts.splice(i, 1);
+      }
+
+      for (let i = state.fireworkParticles.length - 1; i >= 0; i--) {
+        const fp = state.fireworkParticles[i];
+        fp.x += fp.vx * dt;
+        fp.y += fp.vy * dt;
+        fp.vx *= Math.pow(0.32, dt);
+        fp.vy *= Math.pow(0.32, dt);
+        fp.vy += 52 * dt;
+        fp.life -= fp.decay * dt;
+        if (fp.life <= 0) state.fireworkParticles.splice(i, 1);
+      }
+
+      if (isCeleb) {
+        for (let i = 0; i < state.rainHearts.length; i++) {
+          const rh = state.rainHearts[i];
+          rh.y += rh.vy * dt;
+          rh.x += (rh.vx + Math.sin(state.time * 2 + rh.phase) * 18) * dt;
+          if (rh.y > state.height + 20) {
+            rh.y = -20;
+            rh.x = Math.random() * state.width;
+          }
+        }
+      }
+    }
+
+    function render() {
+      const w = state.width;
+      const h = state.height;
+      const cols = state.cols;
+      const cellW = state.cellW;
+      const cellH = state.cellH;
+      const zBuf = state.zBuffer;
+      const dirtyFlags = state.dirtyFlags;
+      const activeCells = state.activeCells;
+
+      for (let i = 0; i < state.activeCount; i++) {
+        const idx = activeCells[i];
+        zBuf[idx] = -1e9;
+        dirtyFlags[idx] = 0;
+      }
+      state.activeCount = 0;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const baseHue = state.colors.mid.h;
+
+      // Ambient stars
+      for (let i = 0; i < state.stars.length; i++) {
+        const s = state.stars[i];
+        const tw = 0.45 + 0.55 * Math.sin(state.time * s.speed + s.phase);
+        ctx.font = `${s.size}px "JetBrains Mono", monospace`;
+        ctx.fillStyle = `hsla(${(baseHue + 18) % 360}, 75%, 86%, ${(s.alpha * tw).toFixed(2)})`;
+        ctx.fillText(s.glyph, s.x, s.y);
+      }
+
+      // Drifting petals & floating mini-hearts
+      ctx.font = `500 ${Math.max(10, state.fontSize - 1)}px "JetBrains Mono", monospace`;
+      for (let i = 0; i < state.petals.length; i++) {
+        const p = state.petals[i];
+        ctx.fillStyle = `hsla(${((baseHue + p.hueOff + 360) % 360).toFixed(0)}, 88%, 74%, ${p.alpha.toFixed(2)})`;
+        ctx.fillText(p.glyph, p.x, p.y);
+      }
+
+      for (let i = 0; i < state.floatingHearts.length; i++) {
+        const fh = state.floatingHearts[i];
+        ctx.font = `600 ${fh.size.toFixed(0)}px "JetBrains Mono", monospace`;
+        ctx.fillStyle = `hsla(${((baseHue + fh.hueOff + 360) % 360).toFixed(0)}, 95%, 78%, ${fh.alpha.toFixed(2)})`;
+        ctx.fillText(fh.glyph, fh.x, fh.y);
+      }
+
+      // Celebration raining ASCII hearts
+      if (state.stage === 'celebration' && state.rainHearts.length > 0) {
+        for (let i = 0; i < state.rainHearts.length; i++) {
+          const rh = state.rainHearts[i];
+          ctx.font = `700 ${rh.size.toFixed(0)}px "JetBrains Mono", monospace`;
+          ctx.fillStyle = `hsla(${((baseHue + rh.hueOff + 360) % 360).toFixed(0)}, 98%, 80%, ${rh.alpha.toFixed(2)})`;
+          ctx.fillText(rh.glyph, rh.x, rh.y);
+        }
+      }
+
+      // Realistic double-thump heartbeat pulse
+      const isCeleb = state.stage === 'celebration';
+      const beatFreq = isCeleb ? 2.15 : 1.15;
+      const beatPhase = (state.time * beatFreq) % 1;
+      const lub = Math.exp(-Math.pow((beatPhase - 0.12) * 14, 2));
+      const dub = Math.exp(-Math.pow((beatPhase - 0.27) * 16, 2)) * 0.65;
+      const flutter = Math.sin(state.time * 28) * 0.055 * state.heartFlutter;
+      const pulseScale = 1 + (lub + dub) * (isCeleb ? 0.115 : 0.068) + flutter;
+
+      const minDim = Math.min(w, h);
+      const isPortrait = h > w;
+
+      const heartOriginX = w * 0.5;
+      const heartOriginY = isCeleb
+        ? h * (isPortrait ? 0.34 : 0.38)
+        : h * (isPortrait ? 0.47 : 0.48);
+      const heartPixelScale = minDim * (isCeleb ? (isPortrait ? 0.215 : 0.235) : (isPortrait ? 0.27 : 0.285)) * pulseScale;
+
+      const lut = buildPaletteLUT();
+
+      // Central 3D ASCII Heart
+      projectObjectToZBuffer(HEART_GEOM, {
+        originX: heartOriginX,
+        originY: heartOriginY,
+        pixelScale: heartPixelScale,
+        rotY: state.heartSpin + state.viewYaw,
+        rotX: state.viewPitch + Math.sin(state.time * 0.9) * 0.07,
+        rotZ: Math.sin(state.time * 0.7) * 0.06 + flutter * 0.9,
+        zBias: 0.4,
+        isHeart: true,
+        lod: 1.0
+      }, lut);
+
+      // Twin Spinning 3D ASCII Roses in Celebration Stage
+      if (state.roseBloomProgress > 0.01) {
+        const rEase = springBloomEase(state.roseBloomProgress);
+        const roseScale = minDim * (isPortrait ? 0.145 : 0.18) * rEase;
+        const spreadX = isPortrait ? w * 0.30 : Math.min(w * 0.27, minDim * 0.45);
+        const roseY = heartOriginY + minDim * 0.03;
+
+        projectObjectToZBuffer(ROSE_GEOM, {
+          originX: heartOriginX - spreadX,
+          originY: roseY,
+          pixelScale: roseScale,
+          rotY: state.roseSpin + state.viewYaw,
+          rotX: 0.36 + state.viewPitch * 0.7,
+          rotZ: -0.14 + Math.sin(state.time * 1.4) * 0.06,
+          zBias: 0.0,
+          isHeart: false,
+          unfurl: state.roseBloomProgress,
+          lod: 0.92
+        }, lut);
+
+        projectObjectToZBuffer(ROSE_GEOM, {
+          originX: heartOriginX + spreadX,
+          originY: roseY,
+          pixelScale: roseScale,
+          rotY: -state.roseSpin + state.viewYaw + 1.1,
+          rotX: 0.36 + state.viewPitch * 0.7,
+          rotZ: 0.14 - Math.sin(state.time * 1.4 + 1.0) * 0.06,
+          zBias: 0.0,
+          isHeart: false,
+          unfurl: state.roseBloomProgress,
+          lod: 0.92
+        }, lut);
+      }
+
+      // Flush ASCII Z-Buffer
+      ctx.font = `700 ${state.fontSize}px "JetBrains Mono", "Fira Code", monospace`;
+      const halfW = cellW * 0.5;
+      const halfH = cellH * 0.5;
+      let lastStyle = '';
+
+      for (let i = 0; i < state.activeCount; i++) {
+        const idx = activeCells[i];
+        const fill = state.colorBuf[idx];
+        if (fill !== lastStyle) {
+          ctx.fillStyle = fill;
+          lastStyle = fill;
+        }
+        const col = idx % cols;
+        const row = (idx / cols) | 0;
+        ctx.fillText(state.charBuf[idx], col * cellW + halfW, row * cellH + halfH);
+      }
+
+      // Burst particles & poof texts
+      for (let i = 0; i < state.burstParticles.length; i++) {
+        const b = state.burstParticles[i];
+        ctx.font = `700 ${b.size.toFixed(0)}px "JetBrains Mono", monospace`;
+        ctx.fillStyle = `hsla(${((baseHue + b.hueOff + 360) % 360).toFixed(0)}, 100%, 82%, ${clamp(b.life, 0, 1).toFixed(2)})`;
+        ctx.fillText(b.glyph, b.x, b.y);
+      }
+
+      for (let i = 0; i < state.poofTexts.length; i++) {
+        const pt = state.poofTexts[i];
+        ctx.font = `600 12px "JetBrains Mono", monospace`;
+        ctx.fillStyle = `hsla(${baseHue.toFixed(0)}, 100%, 88%, ${clamp(pt.life, 0, 1).toFixed(2)})`;
+        ctx.fillText(pt.text, pt.x, pt.y);
+      }
+
+      // Fireworks
+      for (let i = 0; i < state.fireworkParticles.length; i++) {
+        const fp = state.fireworkParticles[i];
+        ctx.font = `700 ${fp.size.toFixed(0)}px "JetBrains Mono", monospace`;
+        ctx.fillStyle = `hsla(${fp.hue.toFixed(0)}, 100%, 80%, ${clamp(fp.life, 0, 1).toFixed(2)})`;
+        ctx.fillText(fp.glyph, fp.x, fp.y);
+      }
+
+      // Dual-Pass GPU Bilinear Neon Bloom
+      try {
+        glowCtx1.clearRect(0, 0, glowCanvas1.width, glowCanvas1.height);
+        glowCtx1.drawImage(canvas, 0, 0, glowCanvas1.width, glowCanvas1.height);
+
+        glowCtx2.clearRect(0, 0, glowCanvas2.width, glowCanvas2.height);
+        glowCtx2.drawImage(glowCanvas1, 0, 0, glowCanvas2.width, glowCanvas2.height);
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.42;
+        ctx.drawImage(glowCanvas1, 0, 0, w, h);
+        ctx.globalAlpha = 0.30;
+        ctx.drawImage(glowCanvas2, 0, 0, w, h);
+        ctx.restore();
+      } catch (_) {}
+    }
+
+    function animationLoop(now) {
+      try {
+        if (!state.lastTime) state.lastTime = now;
+        const dt = Math.min(0.05, (now - state.lastTime) / 1000);
+        state.lastTime = now;
+        update(dt);
+        render();
+      } catch (err) {
+        console.error('ASCII Engine Error:', err);
+      }
+      requestAnimationFrame(animationLoop);
+    }
+
+    /* -----------------------------------------------------------------------
+     * 11. TERMINAL TEASER & TYPEWRITER CONFESSION (WITH MECHANICAL CLICKS)
+     * ----------------------------------------------------------------------- */
+    const teaserEl = document.getElementById('terminalTeaser');
+    let teaserIndex = 0;
+    let teaserTimer = null;
+
+    function runTerminalTeaser() {
+      clearTimeout(teaserTimer);
+      const line = TERMINAL_TEASERS[teaserIndex % TERMINAL_TEASERS.length];
+      let charPos = 0;
+
+      function typeNext() {
+        if (state.stage !== 'proposal') return;
+        teaserEl.textContent = line.slice(0, charPos);
+        if (charPos < line.length) {
+          charPos++;
+          teaserTimer = setTimeout(typeNext, 36 + Math.random() * 24);
+        } else {
+          teaserTimer = setTimeout(() => {
+            teaserIndex++;
+            runTerminalTeaser();
+          }, 2500);
+        }
+      }
+      typeNext();
+    }
+
+    let celebTimers = [];
+    function clearCelebrationTypewriter() {
+      celebTimers.forEach(clearTimeout);
+      celebTimers = [];
+    }
+
+    function typeIntoElement(el, text, speed, startDelay, playClicks) {
+      el.textContent = '';
+      let i = 0;
+      const startId = setTimeout(() => {
+        function step() {
+          el.textContent = text.slice(0, i);
+          if (playClicks && i > 0 && text[i - 1] !== ' ' && i % 2 === 1) {
+            SoundEngine.playKeyClick();
+          }
+          if (i < text.length) {
+            i++;
+            celebTimers.push(setTimeout(step, speed));
+          }
+        }
+        step();
+      }, startDelay);
+      celebTimers.push(startId);
+    }
+
+    function refreshPersonalizedCopy(instantCelebration) {
+      const cleanName = state.recipientName.trim();
+      const cleanQ    = state.proposalQuestion.trim() || 'DO YOU LOVE ME?';
+      const headlineEl = document.getElementById('proposalHeadline');
+
+      headlineEl.textContent = cleanName
+        ? `HEY ${cleanName.toUpperCase()}, ${cleanQ.toUpperCase()}`
+        : cleanQ.toUpperCase();
+
+      if (state.stage === 'celebration') {
+        const titleText = cleanName ? `KNEW IT, ${cleanName.toUpperCase()} ♥` : 'KNEW IT ♥';
+        const subText   = 'Good choice. No refunds.';
+        const msgText   = state.customMessage.trim() || DEFAULT_CONFIG.customMessage;
+
+        const titleEl = document.getElementById('celebrationTitle');
+        const subEl   = document.getElementById('celebrationSubline');
+        const msgEl   = document.getElementById('celebrationMessage');
+
+        clearCelebrationTypewriter();
+        if (instantCelebration) {
+          titleEl.textContent = titleText;
+          subEl.textContent   = subText;
+          msgEl.textContent   = msgText;
+        } else {
+          typeIntoElement(titleEl, titleText, 55, 180, true);
+          typeIntoElement(subEl,   subText,   34, 720, true);
+          typeIntoElement(msgEl,   msgText,   25, 1520, true);
+        }
+      }
+    }
+
+    /* -----------------------------------------------------------------------
+     * 12. DODGING [ NO ] BUTTON WITH 3 DIFFICULTY PROFILES
+     * ----------------------------------------------------------------------- */
+    const yesBtn = document.getElementById('yesBtn');
+    const noBtn  = document.getElementById('noBtn');
+    const noPlaceholder = document.getElementById('noPlaceholder');
+    const dodgeCounterNote = document.getElementById('dodgeCounterNote');
+
+    function getDiffProfile() {
+      return DIFFICULTIES[state.difficulty] || DIFFICULTIES.flirty;
+    }
+
+    function updateYesButtonPower() {
+      const profile = getDiffProfile();
+      const scale = Math.min(2.25, 1 + state.dodgeCount * profile.yesScaleStep);
+      const glowPx = 22 + state.dodgeCount * 9;
+      yesBtn.style.transform = `scale(${scale.toFixed(3)})`;
+      yesBtn.style.boxShadow = `0 0 ${glowPx}px var(--accent-glow), inset 0 0 ${16 + state.dodgeCount * 3}px rgba(255, 143, 179, 0.34)`;
+    }
+
+    function findSafeNoPosition(avoidX, avoidY) {
+      const rect = noBtn.getBoundingClientRect();
+      const bw = Math.max(rect.width, 136);
+      const bh = Math.max(rect.height, 44);
+      const pad = 22;
+
+      const minX = pad;
+      const maxX = Math.max(minX + 10, state.width - bw - pad);
+      const minY = Math.max(pad + 44, state.height * 0.22);
+      const maxY = Math.max(minY + 10, state.height - bh - 92);
+
+      const yesRect = yesBtn.getBoundingClientRect();
+      const dockRect = document.getElementById('controlDock').getBoundingClientRect();
+
+      let bestX = (minX + maxX) * 0.5;
+      let bestY = (minY + maxY) * 0.5;
+      let bestScore = -1;
+
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const cx = minX + Math.random() * (maxX - minX);
+        const cy = minY + Math.random() * (maxY - minY);
+
+        const overlapsYes =
+          cx < yesRect.right + 28 &&
+          cx + bw > yesRect.left - 28 &&
+          cy < yesRect.bottom + 24 &&
+          cy + bh > yesRect.top - 24;
+
+        const overlapsDock =
+          cx + bw > dockRect.left - 18 &&
+          cy + bh > dockRect.top - 18;
+
+        if (overlapsYes || overlapsDock) continue;
+
+        const distFromPointer = Math.hypot((cx + bw * 0.5) - avoidX, (cy + bh * 0.5) - avoidY);
+        if (distFromPointer > bestScore) {
+          bestScore = distFromPointer;
+          bestX = cx;
+          bestY = cy;
+        }
+        if (distFromPointer > Math.min(state.width, state.height) * 0.36) break;
+      }
+
+      return { x: bestX, y: bestY };
+    }
+
+    function clampNoButtonToViewport() {
+      const rect = noBtn.getBoundingClientRect();
+      const x = clamp(rect.left, 18, Math.max(18, state.width - rect.width - 18));
+      const y = clamp(rect.top,  72, Math.max(72, state.height - rect.height - 90));
+      noBtn.style.left = `${x}px`;
+      noBtn.style.top  = `${y}px`;
+    }
+
+    function triggerNoDodge(pointerX, pointerY) {
+      if (state.stage !== 'proposal' || state.noSurrendered || state.modalOpen) return;
+
+      const profile = getDiffProfile();
+      const now = performance.now();
+      if (now - state.lastDodgeTime < profile.debounceMs) return;
+      state.lastDodgeTime = now;
+
+      const oldRect = noBtn.getBoundingClientRect();
+      const oldCX = oldRect.left + oldRect.width * 0.5;
+      const oldCY = oldRect.top + oldRect.height * 0.5;
+
+      const poofLabel = profile.poofs[state.dodgeCount % profile.poofs.length];
+      spawnNoButtonPoof(oldCX, oldCY, poofLabel);
+
+      // Detach into fullscreen floating mode on first dodge
+      if (!state.noDetached) {
+        state.noDetached = true;
+        noBtn.style.position = 'fixed';
+        noBtn.style.zIndex = '25';
+        noBtn.style.left = `${oldRect.left}px`;
+        noBtn.style.top  = `${oldRect.top}px`;
+        noBtn.style.margin = '0';
+        document.body.appendChild(noBtn);
+        void noBtn.offsetWidth;
+      }
+
+      noBtn.style.setProperty('--dodge-duration', profile.glideDuration);
+
+      state.dodgeCount++;
+      state.heartFlutter = 1.0;
+
+      // Play playful pitched boing/bloop sound (higher each dodge!)
+      SoundEngine.playDodgeBoing(state.dodgeCount);
+
+      // Grow and brighten [ YES ♥ ]
+      updateYesButtonPower();
+
+      // Update terminal note below headline
+      const noteIdx = Math.min(profile.notes.length - 1, state.dodgeCount - 1);
+      dodgeCounterNote.textContent = profile.notes[noteIdx];
+
+      if (state.dodgeCount >= profile.maxDodges) {
+        // Surrender! Transform cleanly into a glowing YES button
+        state.noSurrendered = true;
+        noBtn.textContent = profile.surrenderLabel;
+        noBtn.classList.add('surrendered');
+        noBtn.style.transform = 'scale(1.04) rotate(0deg)';
+        const pos = findSafeNoPosition(pointerX, pointerY);
+        noBtn.style.left = `${pos.x}px`;
+        noBtn.style.top  = `${pos.y}px`;
+        spawnHeartSparkleBurst(pos.x + 80, pos.y + 24, 22);
+        SoundEngine.playSparkleChime(true);
+      } else {
+        const labelIdx = Math.min(profile.labels.length - 1, state.dodgeCount - 1);
+        noBtn.textContent = `[ ${profile.labels[labelIdx]} ]`;
+
+        // Chaos Mode: progressively shrink & wildly spin the NO button!
+        if (profile.shrinkSpin) {
+          const chaosScale = Math.max(0.56, 1 - state.dodgeCount * 0.042);
+          state.noSpinAngle += (Math.random() > 0.5 ? 1 : -1) * (120 + Math.random() * 140);
+          noBtn.style.transform = `scale(${chaosScale.toFixed(2)}) rotate(${state.noSpinAngle.toFixed(0)}deg)`;
+        } else {
+          noBtn.style.transform = 'scale(1) rotate(0deg)';
+        }
+
+        const pos = findSafeNoPosition(pointerX, pointerY);
+        noBtn.style.left = `${pos.x}px`;
+        noBtn.style.top  = `${pos.y}px`;
+      }
+    }
+
+    // Desktop cursor proximity dodge sensor
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      if (state.stage !== 'proposal' || state.noSurrendered || state.modalOpen) return;
+
+      const profile = getDiffProfile();
+      const rect = noBtn.getBoundingClientRect();
+      const cx = rect.left + rect.width * 0.5;
+      const cy = rect.top + rect.height * 0.5;
+      if (
+        Math.abs(e.clientX - cx) < rect.width * 0.5 + profile.proximityX &&
+        Math.abs(e.clientY - cy) < rect.height * 0.5 + profile.proximityY
+      ) {
+        triggerNoDodge(e.clientX, e.clientY);
+      }
+    });
+
+    noBtn.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      if (!state.noSurrendered) {
+        e.preventDefault();
+        triggerNoDodge(e.clientX, e.clientY);
+      }
+    });
+
+    noBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.noSurrendered) {
+        enterCelebrationStage();
+      } else {
+        triggerNoDodge(e.clientX, e.clientY);
+      }
+    });
+
+    yesBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      enterCelebrationStage();
+    });
+
+    /* -----------------------------------------------------------------------
+     * 13. CELEBRATION & REPLAY TRANSITIONS
+     * ----------------------------------------------------------------------- */
+    function enterCelebrationStage() {
+      if (state.stage === 'celebration') return;
+      state.stage = 'celebration';
+      clearTimeout(teaserTimer);
+
+      SoundEngine.playCelebrationChord();
+
+      if (state.noDetached) {
+        noBtn.style.opacity = '0';
+        noBtn.style.pointerEvents = 'none';
+      }
+
+      document.getElementById('proposalStage').classList.add('stage-hidden');
+      document.getElementById('celebrationStage').classList.remove('stage-hidden');
+
+      spawnCelebrationRain();
+      const salvoCoords = [
+        [0.50, 0.34],
+        [0.20, 0.24],
+        [0.80, 0.24],
+        [0.32, 0.52],
+        [0.68, 0.52]
+      ];
+      salvoCoords.forEach(([nx, ny], idx) => {
+        setTimeout(() => {
+          if (state.stage === 'celebration') {
+            spawnASCIIFirework(state.width * nx, state.height * ny, idx === 0 || idx === 3);
+          }
+        }, idx * 145);
+      });
+      state.nextAutoFirework = state.time + 1.15;
+
+      refreshPersonalizedCopy(false);
+    }
+
+    function replayProposal(silent) {
+      state.stage = 'proposal';
+      state.dodgeCount = 0;
+      state.noSurrendered = false;
+      state.noSpinAngle = 0;
+      state.heartFlutter = 0;
+      clearCelebrationTypewriter();
+
+      if (state.noDetached) {
+        state.noDetached = false;
+        noBtn.style.position = '';
+        noBtn.style.left = '';
+        noBtn.style.top = '';
+        noBtn.style.zIndex = '';
+        noBtn.style.opacity = '';
+        noBtn.style.pointerEvents = '';
+        noPlaceholder.appendChild(noBtn);
+      }
+
+      noBtn.classList.remove('surrendered');
+      noBtn.style.transform = '';
+      noBtn.textContent = '[ NO ]';
+      yesBtn.style.transform = 'scale(1)';
+      yesBtn.style.boxShadow = '';
+      dodgeCounterNote.textContent = '';
+
+      state.fireworkParticles = [];
+      state.rainHearts = [];
+
+      document.getElementById('celebrationStage').classList.add('stage-hidden');
+      document.getElementById('proposalStage').classList.remove('stage-hidden');
+
+      refreshPersonalizedCopy(true);
+      runTerminalTeaser();
+      if (!silent) showToast('Proposal reset ♥');
+    }
+
+    /* -----------------------------------------------------------------------
+     * 14. CANVAS POINTER INTERACTION (Tilt + Tap Sparkles/Fireworks + Chime)
+     * ----------------------------------------------------------------------- */
+    const drag = { active: false, id: null, lastX: 0, lastY: 0, moved: 0 };
+
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse' || state.modalOpen) return;
+      const nx = (e.clientX / Math.max(1, state.width)) * 2 - 1;
+      const ny = (e.clientY / Math.max(1, state.height)) * 2 - 1;
+      state.targetYaw   = nx * 0.48;
+      state.targetPitch = clamp(0.08 + ny * 0.34, -0.55, 0.65);
+    });
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      drag.active = true;
+      drag.id = e.pointerId;
+      drag.lastX = e.clientX;
+      drag.lastY = e.clientY;
+      drag.moved = 0;
+      try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!drag.active || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.lastX;
+      const dy = e.clientY - drag.lastY;
+      drag.moved += Math.hypot(dx, dy);
+      drag.lastX = e.clientX;
+      drag.lastY = e.clientY;
+
+      if (drag.moved > 6) {
+        canvas.classList.add('is-dragging');
+        state.dragYawOffset += dx * 0.0075;
+        state.dragPitchOffset = clamp(state.dragPitchOffset + dy * 0.006, -0.75, 0.75);
+      }
+    });
+
+    function endCanvasPointer(e, canceled) {
+      if (!drag.active || e.pointerId !== drag.id) return;
+      drag.active = false;
+      canvas.classList.remove('is-dragging');
+
+      if (!canceled && drag.moved <= 10) {
+        if (state.stage === 'celebration') {
+          spawnASCIIFirework(e.clientX, e.clientY, true);
+        } else {
+          spawnHeartSparkleBurst(e.clientX, e.clientY, 18);
+          SoundEngine.playSparkleChime(false);
+        }
+      }
+    }
+
+    canvas.addEventListener('pointerup', (e) => endCanvasPointer(e, false));
+    canvas.addEventListener('pointercancel', (e) => endCanvasPointer(e, true));
+
+    /* -----------------------------------------------------------------------
+     * 15. STANDALONE .HTML SERIALIZER & ONE-CLICK DOWNLOAD (WITH COPY FALLBACK)
+     * ----------------------------------------------------------------------- */
+    function buildStandaloneHTML() {
+      const bakedConfig = {
+        recipientName: state.recipientName,
+        proposalQuestion: state.proposalQuestion || 'DO YOU LOVE ME?',
+        customMessage: state.customMessage || DEFAULT_CONFIG.customMessage,
+        themeIndex: state.themeIndex,
+        difficulty: state.difficulty
+      };
+
+      // Clone the live DOM so we can reset runtime mutations without disturbing the active view
+      const clone = document.documentElement.cloneNode(true);
+      const cloneBody = clone.querySelector('body');
+      if (cloneBody) {
+        cloneBody.classList.remove('controls-hidden');
+      }
+
+      // Ensure modals and toasts start closed in the downloaded file
+      const cCustomModal = clone.querySelector('#customizeModal');
+      const cDlModal     = clone.querySelector('#downloadModal');
+      const cToast       = clone.querySelector('#toastBanner');
+      if (cCustomModal) cCustomModal.classList.add('modal-closed');
+      if (cDlModal)     cDlModal.classList.add('modal-closed');
+      if (cToast)       cToast.classList.add('toast-hidden');
+
+      // Reset proposal & celebration stage visibility to clean initial state
+      const cProp  = clone.querySelector('#proposalStage');
+      const cCeleb = clone.querySelector('#celebrationStage');
+      if (cProp)  cProp.classList.remove('stage-hidden');
+      if (cCeleb) cCeleb.classList.add('stage-hidden');
+
+      // Re-dock NO button cleanly inside #noPlaceholder if it had detached
+      const cNoBtn = clone.querySelector('#noBtn');
+      const cNoPlaceholder = clone.querySelector('#noPlaceholder');
+      if (cNoBtn && cNoPlaceholder) {
+        cNoBtn.removeAttribute('style');
+        cNoBtn.classList.remove('surrendered');
+        cNoBtn.textContent = '[ NO ]';
+        if (cNoBtn.parentNode !== cNoPlaceholder) {
+          cNoPlaceholder.appendChild(cNoBtn);
+        }
+      }
+
+      const cYesBtn = clone.querySelector('#yesBtn');
+      if (cYesBtn) cYesBtn.removeAttribute('style');
+
+      const cDodgeNote = clone.querySelector('#dodgeCounterNote');
+      if (cDodgeNote) cDodgeNote.textContent = '';
+
+      const cCanvas = clone.querySelector('#sceneCanvas');
+      if (cCanvas) {
+        cCanvas.removeAttribute('width');
+        cCanvas.removeAttribute('height');
+        cCanvas.classList.remove('is-dragging');
+      }
+
+      // Serialize and bake the user's live config cleanly into DEFAULT_CONFIG
+      let serialized = '<!DOCTYPE html>\n' + clone.outerHTML;
+      const configBlock =
+        '/* __CUSTOM_CONFIG_START__ */\n' +
+        '    const DEFAULT_CONFIG = ' + JSON.stringify(bakedConfig, null, 2).replace(/\n/g, '\n    ') + ';\n' +
+        '    /* __CUSTOM_CONFIG_END__ */';
+
+      serialized = serialized.replace(
+        /\/\* __CUSTOM_CONFIG_START__ \*\/[\s\S]*?\/\* __CUSTOM_CONFIG_END__ \*\//,
+        () => configBlock
+      );
+
+      return serialized;
+    }
+
+    function triggerBlobDownload(htmlText) {
+      try {
+        const blob = new Blob([htmlText], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ascii_love_proposal.html';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function copyTextToClipboard(text) {
+      // Use hidden textarea + document.execCommand('copy') for maximum iframe compatibility
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    /* -----------------------------------------------------------------------
+     * 16. CONTROLS, FULLSCREEN, SOUND, THEME, DIFFICULTY, MODALS & HOTKEYS
+     * ----------------------------------------------------------------------- */
+    let toastTimer = null;
+    function showToast(msg) {
+      const banner = document.getElementById('toastBanner');
+      const content = document.getElementById('toastContent');
+      content.textContent = msg;
+      banner.classList.remove('toast-hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        banner.classList.add('toast-hidden');
+      }, 2600);
+    }
+
+    function isFullscreenActive() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+    }
+
+    function updateFullscreenUI() {
+      const active = isFullscreenActive();
+      document.getElementById('fsEnterIcon').classList.toggle('hidden', active);
+      document.getElementById('fsExitIcon').classList.toggle('hidden', !active);
+      document.getElementById('fsBtnLabel').textContent = active ? 'Exit' : 'Fullscreen';
+      resizeCanvas();
+    }
+
+    async function toggleNativeFullscreen() {
+      try {
+        if (!isFullscreenActive()) {
+          const el = document.documentElement;
+          if (el.requestFullscreen) {
+            await el.requestFullscreen();
+          } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+          } else if (el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+          } else {
+            showToast('Click Download to open in your browser for full OS screen');
+          }
+        } else {
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        }
+      } catch (_) {
+        // Graceful non-breaking toast when embedded preview iframe blocks OS fullscreen
+        showToast('Click Download to open in your browser for full OS screen');
+      }
+    }
+
+    document.addEventListener('fullscreenchange', updateFullscreenUI);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
+
+    function applyTheme(index, silent) {
+      state.themeIndex = (index + THEMES.length) % THEMES.length;
+      const t = THEMES[state.themeIndex];
+      state.targetTheme = t;
+
+      const root = document.documentElement;
+      root.style.setProperty('--bg-aura', t.bgAura);
+      root.style.setProperty('--accent-primary', t.accentPrimary);
+      root.style.setProperty('--accent-soft', t.accentSoft);
+      root.style.setProperty('--accent-glow', t.accentGlow);
+
+      document.getElementById('themeSwatch').style.background = t.swatch;
+      document.getElementById('themeLabel').textContent = t.name;
+
+      if (!silent) {
+        SoundEngine.playSparkleChime(true);
+        showToast(`Theme: ${t.name}`);
+      }
+    }
+
+    function updateSoundUI() {
+      const on = SoundEngine.enabled;
+      document.getElementById('topSoundOnIcon').classList.toggle('hidden', !on);
+      document.getElementById('topSoundOffIcon').classList.toggle('hidden', on);
+      document.getElementById('dockSoundOnIcon').classList.toggle('hidden', !on);
+      document.getElementById('dockSoundOffIcon').classList.toggle('hidden', on);
+      document.getElementById('topSoundLabel').textContent = on ? 'SFX ON' : 'MUTED';
+      const dot = document.getElementById('soundWaveDot');
+      dot.style.background = on ? 'var(--accent-soft)' : 'rgba(255,255,255,0.28)';
+      dot.style.boxShadow = on ? '0 0 8px var(--accent-glow)' : 'none';
+    }
+
+    function toggleSound() {
+      SoundEngine.enabled = !SoundEngine.enabled;
+      updateSoundUI();
+      if (SoundEngine.enabled) {
+        SoundEngine.unlock();
+        SoundEngine.playSparkleChime(true);
+        showToast('Sound chimes ON ♫');
+      } else {
+        showToast('Sound muted');
+      }
+    }
+
+    function setDifficulty(diffKey, silent) {
+      if (!DIFFICULTIES[diffKey]) return;
+      state.difficulty = diffKey;
+      const prof = DIFFICULTIES[diffKey];
+
+      document.getElementById('difficultyLabel').textContent = prof.label;
+      document.querySelectorAll('.diff-pill').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.diff === diffKey);
+      });
+
+      // Reset dodge progress cleanly if user switches difficulty mid-proposal
+      if (state.stage === 'proposal' && state.dodgeCount > 0 && !silent) {
+        replayProposal(true);
+      }
+
+      if (!silent) {
+        showToast(`Difficulty: ${prof.label} (${prof.maxDodges} dodges)`);
+      }
+    }
+
+    function cycleDifficulty() {
+      const curIdx = DIFFICULTY_ORDER.indexOf(state.difficulty);
+      const nextKey = DIFFICULTY_ORDER[(curIdx + 1) % DIFFICULTY_ORDER.length];
+      setDifficulty(nextKey, false);
+    }
+
+    function toggleControlsHidden(force) {
+      state.controlsHidden = force !== undefined ? force : !state.controlsHidden;
+      document.body.classList.toggle('controls-hidden', state.controlsHidden);
+      if (state.controlsHidden) {
+        showToast('Controls hidden • Press H or tap bottom-right to restore');
+      }
+    }
+
+    // Customize & Download Modals
+    const customizeModal = document.getElementById('customizeModal');
+    const downloadModal  = document.getElementById('downloadModal');
+    const nameInput      = document.getElementById('nameInput');
+    const questionInput  = document.getElementById('questionInput');
+    const messageInput   = document.getElementById('messageInput');
+
+    function openCustomizeModal() {
+      closeDownloadModal();
+      state.modalOpen = true;
+      nameInput.value = state.recipientName;
+      questionInput.value = state.proposalQuestion;
+      messageInput.value = state.customMessage;
+      customizeModal.classList.remove('modal-closed');
+      setTimeout(() => nameInput.focus(), 60);
+    }
+
+    function closeCustomizeModal() {
+      customizeModal.classList.add('modal-closed');
+      state.modalOpen = !downloadModal.classList.contains('modal-closed');
+    }
+
+    function openDownloadModal() {
+      closeCustomizeModal();
+      state.lastGeneratedHtml = buildStandaloneHTML();
+      triggerBlobDownload(state.lastGeneratedHtml);
+      state.modalOpen = true;
+      downloadModal.classList.remove('modal-closed');
+      showToast('Downloading ascii_love_proposal.html ♥');
+    }
+
+    function closeDownloadModal() {
+      downloadModal.classList.add('modal-closed');
+      state.modalOpen = !customizeModal.classList.contains('modal-closed');
+    }
+
+    nameInput.addEventListener('input', (e) => {
+      state.recipientName = e.target.value;
+      refreshPersonalizedCopy(true);
+    });
+
+    questionInput.addEventListener('input', (e) => {
+      state.proposalQuestion = e.target.value;
+      refreshPersonalizedCopy(true);
+    });
+
+    messageInput.addEventListener('input', (e) => {
+      state.customMessage = e.target.value;
+      refreshPersonalizedCopy(true);
+    });
+
+    document.querySelectorAll('.diff-pill').forEach((btn) => {
+      btn.addEventListener('click', () => setDifficulty(btn.dataset.diff, false));
+    });
+
+    // Wire buttons
+    document.getElementById('fullscreenBtn').addEventListener('click', toggleNativeFullscreen);
+    document.getElementById('themeBtn').addEventListener('click', () => applyTheme(state.themeIndex + 1, false));
+    document.getElementById('topSoundBtn').addEventListener('click', toggleSound);
+    document.getElementById('dockSoundBtn').addEventListener('click', toggleSound);
+    document.getElementById('difficultyBtn').addEventListener('click', cycleDifficulty);
+    document.getElementById('customizeBtn').addEventListener('click', openCustomizeModal);
+    document.getElementById('downloadBtn').addEventListener('click', openDownloadModal);
+    document.getElementById('replayBtn').addEventListener('click', () => replayProposal(false));
+    document.getElementById('hideUiBtn').addEventListener('click', () => toggleControlsHidden(true));
+    document.getElementById('restoreControlsBtn').addEventListener('click', () => toggleControlsHidden(false));
+
+    document.getElementById('closeModalBtn').addEventListener('click', closeCustomizeModal);
+    document.getElementById('saveModalBtn').addEventListener('click', () => {
+      closeCustomizeModal();
+      showToast('Personalized ♥');
+    });
+
+    document.getElementById('closeDownloadModalBtn').addEventListener('click', closeDownloadModal);
+    document.getElementById('triggerBlobAgainBtn').addEventListener('click', () => {
+      state.lastGeneratedHtml = buildStandaloneHTML();
+      triggerBlobDownload(state.lastGeneratedHtml);
+      showToast('Download triggered again ♥');
+    });
+    document.getElementById('copyHtmlFallbackBtn').addEventListener('click', () => {
+      state.lastGeneratedHtml = buildStandaloneHTML();
+      const copied = copyTextToClipboard(state.lastGeneratedHtml);
+      showToast(copied ? 'Complete HTML copied to clipboard! ✦' : 'Select & copy from editor panel');
+    });
+
+    customizeModal.addEventListener('click', (e) => {
+      if (e.target === customizeModal) closeCustomizeModal();
+    });
+    downloadModal.addEventListener('click', (e) => {
+      if (e.target === downloadModal) closeDownloadModal();
+    });
+
+    // Keyboard Shortcuts (F, C, M, D, E, R, H, Escape)
+    window.addEventListener('keydown', (e) => {
+      const isTyping = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      if (e.key === 'Escape') {
+        if (!customizeModal.classList.contains('modal-closed')) closeCustomizeModal();
+        else if (!downloadModal.classList.contains('modal-closed')) closeDownloadModal();
+        else if (state.controlsHidden) toggleControlsHidden(false);
+        return;
+      }
+      if (isTyping) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'f') {
+        e.preventDefault();
+        toggleNativeFullscreen();
+      } else if (key === 'c') {
+        applyTheme(state.themeIndex + 1, false);
+      } else if (key === 'm') {
+        toggleSound();
+      } else if (key === 'd') {
+        cycleDifficulty();
+      } else if (key === 'e') {
+        e.preventDefault();
+        openCustomizeModal();
+      } else if (key === 'r') {
+        replayProposal(false);
+      } else if (key === 'h') {
+        toggleControlsHidden();
+      }
+    });
+
+    /* -----------------------------------------------------------------------
+     * 17. BOOTSTRAP ON WINDOW LOAD
+     * ----------------------------------------------------------------------- */
+    window.addEventListener('resize', resizeCanvas);
+
+    window.onload = function () {
+      applyTheme(state.themeIndex, true);
+      setDifficulty(state.difficulty, true);
+      updateSoundUI();
+      resizeCanvas();
+      refreshPersonalizedCopy(true);
+      runTerminalTeaser();
+      requestAnimationFrame(animationLoop);
+    };
+  })();
+</script>
+
+
+</body></html>
